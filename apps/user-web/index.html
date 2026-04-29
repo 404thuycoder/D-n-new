@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description"
+    content="Lên kế hoạch du lịch tự túc: gợi ý điểm đến, tìm theo ngân sách & sở thích, lịch trình và bản đồ — WanderViệt." />
+  <title>WanderViệt — Du lịch tự túc, thông minh</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Outfit:wght@500;600;700&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v=1776819067180"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="global-tokens.css?v=1776819067180" />
+  <link rel="stylesheet" href="styles.css?v=1776819067180" />
+  <link rel="stylesheet" href="voice-guide.css?v=1776819067180" />
+  <link rel="stylesheet" href="companion.css?v=1776819067180" />
+</head>
+
+<body>
+  <a class="skip-link" href="#main">Bỏ qua đến nội dung chính</a>
+
+  <header class="site-header" id="header-container"></header>
+
+  <main id="main">
+    <section class="hero-v2" style="background-image: url('https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=2000'); background-size: cover; background-position: center;">
+      <div class="hero-v2__bg">
+        <div class="hero-v2__slideshow" id="heroSlideshow"></div>
+        <div class="hero-v2__overlay"></div>
+        <div class="hero-v2__orb hero-v2__orb--1"></div>
+        <div class="hero-v2__orb hero-v2__orb--2"></div>
+      </div>
+      <div class="container hero-v2__content">
+        <div class="hero-v2__main">
+          <p class="hero-v2__eyebrow">✨ AI-Powered Travel Assistant</p>
+          <h1 class="hero-v2__title">Khám phá Việt Nam <br><span class="text-gradient">Với Trợ Lý AI</span></h1>
+          <p class="hero-v2__lead">Hỏi bất cứ điều gì, lên lịch trình thông minh và khám phá điểm đến theo sở thích riêng của bạn.</p>
+          
+          <form class="hero-v2__search" role="search" id="heroSearchForm" autocomplete="off">
+            <div class="search-box">
+              <span class="search-icon">🔍</span>
+              <input type="search" placeholder="Bạn muốn đi đâu? (Đà Lạt, Phú Quốc...)" data-search-input id="heroSearchInput" />
+              <button type="button" class="btn-icon visual-search-trigger" id="visualSearchTrigger" title="Tìm kiếm bằng hình ảnh" style="background:none;border:none;cursor:pointer;padding:0 8px;font-size:1.2rem;color:var(--text-muted);flex-shrink:0;" onclick="WanderUI && WanderUI.openVisualSearch ? WanderUI.openVisualSearch() : alert('Tính năng đang tải...')" aria-label="Tìm theo hình ảnh">📷</button>
+              <button type="submit" class="hero-v2__btn">Bắt đầu ngay</button>
+            </div>
+            <!-- Dynamic Suggestions Dropdown -->
+            <div class="search-suggestions" id="searchSuggestions">
+              <div class="search-suggestions__header">
+                <span id="suggestionLabel">Gợi ý điểm đến</span>
+                <button type="button" class="search-suggestions__clear-all" id="clearSearchHistory" style="display:none;">Xóa tất cả</button>
+              </div>
+              <div class="search-suggestions__list" id="suggestionList">
+                <!-- Items injected via JS -->
+              </div>
+            </div>
+          </form>
+
+          <div class="hero-v2__tags">
+            <span>Phổ biến:</span>
+            <button type="button" class="glass-chip" data-filter-tag="biển">Biển đảo</button>
+            <button type="button" class="glass-chip" data-filter-tag="văn hóa">Văn hóa</button>
+            <button type="button" class="glass-chip" data-filter-tag="ẩm thực">Ẩm thực</button>
+          </div>
+        </div>
+        
+        <div class="hero-v2__visual">
+          <!-- Premium Floating Card showing a destination -->
+          <div class="floating-card">
+            <img src="https://images.unsplash.com/photo-1528127269322-539801943592?w=500&q=80" alt="Hội An" />
+            <div class="floating-card__info">
+              <h4>Phố cổ Hội An</h4>
+              <p>📍 Quảng Nam</p>
+              <div class="floating-card__badge">Verified</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section personal-picks" id="personal-picks" data-personal-section hidden
+      aria-labelledby="personal-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="personal-title" class="section-title">Gợi ý dành cho bạn</h2>
+          <p class="section-desc">Điểm đến khớp hồ sơ và sở thích bạn đã lưu trên trình duyệt này.</p>
+        </header>
+        <div class="personal-grid" data-personal-grid></div>
+      </div>
+    </section>
+
+    <section id="destinations" class="section destinations" aria-labelledby="dest-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="dest-title" class="section-title">Điểm du lịch nổi bật</h2>
+          <p class="section-desc">Chọn theo chủ đề — chúng tôi gợi ý những nơi được du khách yêu thích nhất.</p>
+        </header>
+
+        <div class="filter-bar" role="group" aria-label="Lọc theo chủ đề">
+          <button type="button" class="filter-btn is-active" data-dest-filter="all">Tất cả</button>
+          <button type="button" class="filter-btn" data-dest-filter="biển">Biển đảo</button>
+          <button type="button" class="filter-btn" data-dest-filter="văn hóa">Văn hóa</button>
+          <button type="button" class="filter-btn" data-dest-filter="leo núi">Leo núi</button>
+          <button type="button" class="filter-btn" data-dest-filter="ẩm thực">Ẩm thực</button>
+        </div>
+
+        <noscript>
+          <p class="section-desc">Bật JavaScript để xem đầy đủ điểm đến, đăng nhập và lập lịch trình.</p>
+        </noscript>
+        <div class="dest-grid" data-dest-grid></div>
+        <p class="search-empty visually-hidden" data-search-empty role="status">Không tìm thấy điểm đến phù hợp. Thử từ
+          khóa khác.</p>
+      </div>
+    </section>
+
+    <!-- ===== PROMO BANNER ===== -->
+    <section id="offers" class="section promo-banner" aria-labelledby="promo-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="promo-title" class="section-title">Ưu đãi &amp; Khuyến mãi</h2>
+          <p class="section-desc">Săn deal du lịch hấp dẫn, phòng khách sạn giảm giá và tour độc quyền chỉ có tại WanderViệt.</p>
+        </header>
+        <div class="promo-grid">
+          <div class="promo-card promo-card--highlight">
+            <div class="promo-card__badge">🔥 HOT DEAL</div>
+            <div class="promo-card__img" style="background-image:url('https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&q=80')"></div>
+            <div class="promo-card__body">
+              <h3 class="promo-card__title">Phú Quốc 4N3Đ</h3>
+              <p class="promo-card__desc">Resort 4 sao + vé máy bay khứ hồi — trọn gói</p>
+              <div class="promo-card__price">
+                <span class="promo-card__old">5.800.000 ₫</span>
+                <span class="promo-card__new">3.990.000 ₫</span>
+              </div>
+              <a href="#contact" class="btn btn--primary btn--small">Đặt ngay</a>
+            </div>
+          </div>
+          <div class="promo-card">
+            <div class="promo-card__badge promo-card__badge--green">🌿 PHỔ BIẾN</div>
+            <div class="promo-card__img" style="background-image:url('https://images.unsplash.com/photo-1528127269322-539801943592?w=600&q=80')"></div>
+            <div class="promo-card__body">
+              <h3 class="promo-card__title">Hội An 3N2Đ</h3>
+              <p class="promo-card__desc">Homestay phố cổ + xe đạp tham quan + bữa sáng</p>
+              <div class="promo-card__price">
+                <span class="promo-card__old">2.500.000 ₫</span>
+                <span class="promo-card__new">1.750.000 ₫</span>
+              </div>
+              <a href="#contact" class="btn btn--primary btn--small">Đặt ngay</a>
+            </div>
+          </div>
+          <div class="promo-card">
+            <div class="promo-card__badge promo-card__badge--blue">❄️ MÙA HÈ</div>
+            <div class="promo-card__img" style="background-image:url('https://images.unsplash.com/photo-1596422846543-75c6fc197f07?w=600&q=80')"></div>
+            <div class="promo-card__body">
+              <h3 class="promo-card__title">Sa Pa 5N4Đ</h3>
+              <p class="promo-card__desc">Homestay bản làng + trekking Fansipan + cáp treo</p>
+              <div class="promo-card__price">
+                <span class="promo-card__old">3.200.000 ₫</span>
+                <span class="promo-card__new">2.290.000 ₫</span>
+              </div>
+              <a href="#contact" class="btn btn--primary btn--small">Đặt ngay</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Countdown strip -->
+        <div class="promo-countdown">
+          <span class="promo-countdown__icon">⏰</span>
+          <span>Ưu đãi có hạn — <strong>kết thúc 30/04/2026</strong>. Đặt trước, hưởng giá tốt!</span>
+          <a href="#contact" class="btn btn--ghost btn--small">Tư vấn miễn phí</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Business Services Section -->
+    <section id="business-services" class="section" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
+      <div class="container">
+        <div class="section-header" style="text-align: center; margin-bottom: 3rem;">
+          <h2 class="section-title" style="color: var(--accent-primary);">🏨 Dịch vụ từ Đối tác</h2>
+          <p class="section-desc">Khám phá các tour du lịch và dịch vụ cao cấp từ cộng đồng doanh nghiệp WanderViệt.</p>
+        </div>
+        <div class="dest-grid" id="biz-services-grid">
+          <!-- Will be populated by JS -->
+          <div style="grid-column: 1/-1; padding: 4rem; text-align: center; color: #64748b; background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+            <div class="spinner" style="margin: 0 auto 1rem;"></div>
+            <p>Đang kết nối với các đối tác du lịch...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="smart-search" class="section smart-search" aria-labelledby="smart-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="smart-title" class="section-title">Tìm điểm đến theo bạn</h2>
+          <p class="section-desc">Lọc theo ngân sách, nhịp chuyến đi, sở thích và thói quen sinh hoạt. Hoặc sử dụng <a href="planner.html" style="color: var(--accent); font-weight: 700; text-decoration: underline;">AI Trợ lý</a> để thiết kế lịch trình riêng cho bạn!</p>
+        </header>
+        <form class="smart-form" data-smart-form>
+          <div class="smart-grid">
+            <fieldset class="smart-fieldset">
+              <legend>Ngân sách chung (mức ước lượng)</legend>
+              <label class="radio-tile"><input type="radio" name="budget" value="1" checked /> Tiết kiệm</label>
+              <label class="radio-tile"><input type="radio" name="budget" value="2" /> Vừa phải</label>
+              <label class="radio-tile"><input type="radio" name="budget" value="3" /> Thoải mái</label>
+            </fieldset>
+            <fieldset class="smart-fieldset">
+              <legend>Nhịp chuyến đi</legend>
+              <label class="radio-tile"><input type="radio" name="pace" value="cham" /> Thong thả</label>
+              <label class="radio-tile"><input type="radio" name="pace" value="vua" checked /> Cân bằng</label>
+              <label class="radio-tile"><input type="radio" name="pace" value="nhanh" /> Năng động</label>
+            </fieldset>
+            <fieldset class="smart-fieldset smart-fieldset--wide">
+              <legend>Sở thích (chọn nhiều)</legend>
+              <div class="checkbox-row">
+                <label class="check-tile"><input type="checkbox" name="interest" value="biển" /> Biển</label>
+                <label class="check-tile"><input type="checkbox" name="interest" value="văn hóa" /> Văn hóa</label>
+                <label class="check-tile"><input type="checkbox" name="interest" value="ẩm thực" /> Ẩm thực</label>
+                <label class="check-tile"><input type="checkbox" name="interest" value="trekking" /> Trekking</label>
+                <label class="check-tile"><input type="checkbox" name="interest" value="nghỉ dưỡng" /> Nghỉ
+                  dưỡng</label>
+                <label class="check-tile"><input type="checkbox" name="interest" value="phố cổ" /> Phố cổ</label>
+              </div>
+            </fieldset>
+            <fieldset class="smart-fieldset smart-fieldset--wide">
+              <legend>Thói quen / bối cảnh</legend>
+              <div class="checkbox-row">
+                <label class="check-tile"><input type="checkbox" name="habit" value="đi sớm" /> Ưa dậy sớm</label>
+                <label class="check-tile"><input type="checkbox" name="habit" value="cú đêm" /> Hay hoạt động
+                  tối</label>
+                <label class="check-tile"><input type="checkbox" name="habit" value="gia đình" /> Đi cùng gia
+                  đình</label>
+                <label class="check-tile"><input type="checkbox" name="habit" value="đi một mình" /> Đi một mình</label>
+                <label class="check-tile"><input type="checkbox" name="habit" value="cặp đôi" /> Cặp đôi</label>
+              </div>
+            </fieldset>
+          </div>
+          <div class="smart-actions">
+            <button type="submit" class="btn btn--primary">Gợi ý ngay</button>
+            <button type="button" class="btn btn--ghost" data-save-prefs>Lưu vào hồ sơ</button>
+          </div>
+        </form>
+        <p class="smart-hint" data-smart-hint hidden></p>
+        <div class="smart-results" data-smart-results></div>
+      </div>
+    </section>
+
+    <section id="planner" class="section planner" aria-labelledby="plan-title">
+      <div class="container">
+        <header class="section-head section-head--light">
+          <h2 id="plan-title" class="section-title">Lập lịch &amp; chỉ đường</h2>
+          <p class="section-desc">Thêm điểm dừng từ danh sách, xem trên bản đồ và mở chỉ đường Google Maps theo thứ tự.
+          </p>
+        </header>
+        <div class="planner-layout">
+          <div class="planner-side">
+            <label class="field">
+              <span class="field-label">Tên chuyến đi</span>
+              <input type="text" data-trip-name placeholder="Ví dụ: Miền Trung 5 ngày" />
+            </label>
+            <div class="planner-warehouse-group">
+              <span class="field-label" style="display: block; margin-bottom: 0.5rem;">📦 Kho địa điểm (Vuốt ngang chọn ảnh)</span>
+              <div class="warehouse-scroll-container">
+                <div class="planner-warehouse-grid" data-warehouse-grid>
+                  <!-- Dynamically populated by JS: Mini-cards with images and '+' button -->
+                </div>
+              </div>
+              
+              <!-- Manual Input for custom stops -->
+              <div class="planner-manual-input">
+                <span class="field-label" style="font-size: 0.85rem; color: var(--accent);">📍 Thêm địa chỉ tự do</span>
+                <div class="input-group-row">
+                  <input type="text" id="manual-stop-input" placeholder="Nhập địa chỉ bất kỳ..." autocomplete="off" />
+                  <button type="button" class="btn btn--primary btn--small" id="btn-add-manual-stop">Thêm</button>
+                </div>
+              </div>
+            </div>
+            <ol class="planner-stops" data-stop-list></ol>
+            <p class="planner-empty" data-stop-empty>Chưa có điểm dừng. Chọn địa điểm và nhấn Thêm.</p>
+            <div class="planner-mode">
+              <span class="field-label">Phương tiện di chuyển:</span>
+              <div class="mode-btns">
+                <button type="button" class="btn btn--outline btn--small is-active" data-mode="driving" title="Ô tô">🚗 Ô tô</button>
+                <button type="button" class="btn btn--outline btn--small" data-mode="motorcycle" title="Xe máy">🏍️ Xe máy</button>
+              </div>
+            </div>
+            <div class="planner-actions">
+              <a class="btn btn--primary btn--small" data-directions-link href="#" target="_blank"
+                rel="noopener noreferrer" hidden>Mở chỉ đường (Google Maps)</a>
+              <button type="button" class="btn btn--outline btn--small" data-toggle-steps hidden>📋 Xem danh sách chỉ đường</button>
+              <button type="button" class="btn btn--ghost btn--small" data-save-trip>Lưu chuyến</button>
+              <button type="button" class="btn btn--ghost btn--small" data-clear-trip>Xóa danh sách</button>
+            </div>
+            <div id="planner-steps" class="planner-steps" data-route-steps hidden>
+              <h4 style="margin: 0 0 0.75rem; font-size: 1rem; color: var(--color-primary);">🏁 Lộ trình từng bước</h4>
+              <ul class="steps-list" data-steps-list></ul>
+            </div>
+            <p class="planner-status" data-trip-status role="status"></p>
+          </div>
+          <div class="planner-map-wrap">
+            <div id="trip-map" class="trip-map" role="application" aria-label="Bản đồ lịch trình"></div>
+            <div class="map-floating-hud">
+              <button type="button" class="btn-map-hud" data-map-fullscreen-btn title="Toàn màn hình">⛶</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="itineraries" class="section itineraries" aria-labelledby="itin-title">
+      <div class="container">
+        <header class="section-head section-head--light">
+          <h2 id="itin-title" class="section-title">Gợi ý lộ trình</h2>
+          <p class="section-desc">Chọn số ngày — chúng tôi sắp xếp thứ tự tham quan hợp lý, tiết kiệm di chuyển.</p>
+        </header>
+
+        <div class="itin-tabs" role="tablist" aria-label="Lộ trình theo số ngày">
+          <button type="button" class="itin-tab is-active" role="tab" aria-selected="true" aria-controls="panel-3"
+            id="tab-3" data-itin="3">3 ngày</button>
+          <button type="button" class="itin-tab" role="tab" aria-selected="false" aria-controls="panel-5" id="tab-5"
+            data-itin="5">5 ngày</button>
+          <button type="button" class="itin-tab" role="tab" aria-selected="false" aria-controls="panel-7" id="tab-7"
+            data-itin="7">7 ngày</button>
+        </div>
+
+        <div class="itin-panels">
+          <div id="panel-3" class="itin-panel is-visible" role="tabpanel" aria-labelledby="tab-3" data-panel="3">
+            <div class="itin-visual">
+              <ol class="itin-timeline">
+                <li><span class="itin-day">Ngày 1</span> Hà Nội — phố cổ, ẩm thực đêm</li>
+                <li><span class="itin-day">Ngày 2</span> Vịnh Hạ Long — du thuyền 1 ngày</li>
+                <li><span class="itin-day">Ngày 3</span> Ninh Bình — Tràng An / Hang Múa</li>
+              </ol>
+              <p class="itin-tip"><strong>Mẹo:</strong> Đặt vé tàu/bay sớm; tránh cuối tuần ở phố cổ nếu thích yên tĩnh.
+              </p>
+            </div>
+          </div>
+          <div id="panel-5" class="itin-panel" role="tabpanel" aria-labelledby="tab-5" hidden data-panel="5">
+            <div class="itin-visual">
+              <ol class="itin-timeline">
+                <li><span class="itin-day">Ngày 1–2</span> Đà Nẵng — biển Mỹ Khê, Bà Nà Hills</li>
+                <li><span class="itin-day">Ngày 3</span> Hội An — phố cổ, đèn lồng</li>
+                <li><span class="itin-day">Ngày 4</span> Huế — Đại Nội, lăng tẩm</li>
+                <li><span class="itin-day">Ngày 5</span> Trả phòng — mua quà & bay về</li>
+              </ol>
+              <p class="itin-tip"><strong>Mẹo:</strong> Thuê xe máy ở Hội An để linh hoạt; đặt chỗ ăn Hội An trước giờ
+                cao điểm.</p>
+            </div>
+          </div>
+          <div id="panel-7" class="itin-panel" role="tabpanel" aria-labelledby="tab-7" hidden data-panel="7">
+            <div class="itin-visual">
+              <ol class="itin-timeline">
+                <li><span class="itin-day">Ngày 1–2</span> TP.HCM — chợ Bến Thành, nhà thờ Đức Bà</li>
+                <li><span class="itin-day">Ngày 3–4</span> Phú Quốc — biển, chợ đêm, làng chài</li>
+                <li><span class="itin-day">Ngày 5–6</span> Cần Thơ — chợ nổi, vườn trái cây</li>
+                <li><span class="itin-day">Ngày 7</span> Kết thúc — lựa chọn thêm Mỹ Tho nếu còn thời gian</li>
+              </ol>
+              <p class="itin-tip"><strong>Mẹo:</strong> Bay nội địa tiết kiệm thời gian; mang kem chống nắng & nón rộng
+                vành.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="experiences" class="section features" aria-labelledby="feat-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="feat-title" class="section-title">Vì sao chọn WanderViệt</h2>
+          <p class="section-desc">Chúng tôi tối ưu từ khâu gợi ý đến hỗ trợ trên đường — để bạn tập trung tận hưởng.</p>
+        </header>
+        <ul class="feature-grid">
+          <li class="feature-card">
+            <span class="feature-icon" aria-hidden="true">◇</span>
+            <h3 class="feature-title">Lộ trình cá nhân hóa</h3>
+            <p>Điều chỉnh theo ngân sách, nhịp đi và sở thích (gia đình, cặp đôi, đi một mình).</p>
+          </li>
+          <li class="feature-card">
+            <span class="feature-icon" aria-hidden="true">✦</span>
+            <h3 class="feature-title">Đối tác tin cậy</h3>
+            <p>Khách sạn & tour được kiểm duyệt; minh bạch giá và điều kiện hủy.</p>
+          </li>
+          <li class="feature-card">
+            <span class="feature-icon" aria-hidden="true">◎</span>
+            <h3 class="feature-title">Hỗ trợ 24/7</h3>
+            <p>Hotline và chat khi bạn cần đổi lịch hoặc gặp sự cố nhỏ trên hành trình.</p>
+          </li>
+          <li class="feature-card">
+            <span class="feature-icon" aria-hidden="true">◈</span>
+            <h3 class="feature-title">Gợi ý ẩm thực & văn hóa</h3>
+            <p>Bản đồ món địa phương, lễ hội theo mùa — không chỉ “đi cho hết điểm”.</p>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section stats" aria-label="Thành tựu của WanderViệt">
+      <div class="container stats-grid">
+        <div class="stat-item">
+          <span class="stat-number" data-stat="users" id="landing-stat-users">—</span>
+          <span class="stat-label">Khách hàng tin tưởng</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" data-stat="places" id="landing-stat-places">—</span>
+          <span class="stat-label">Điểm đến đa dạng</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">15+</span>
+          <span class="stat-label">Năm kinh nghiệm</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number" data-stat="reviews" id="landing-stat-reviews">—</span>
+          <span class="stat-label">Phản hồi nhận được</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="reviews" class="section reviews" aria-labelledby="rev-title">
+      <div class="container">
+        <header class="section-head">
+          <h2 id="rev-title" class="section-title">Du khách nói gì</h2>
+          <p class="section-desc">Đánh giá thực tế từ những chuyến đi gần đây.</p>
+        </header>
+        <div class="review-slider" data-review-slider>
+          <button type="button" class="review-nav review-nav--prev" aria-label="Lời chứng thực trước"
+            data-review-prev>‹</button>
+          <div class="review-track" data-review-track>
+            <blockquote class="review-card">
+              <p>“Lộ trình 5 ngày Miền Trung rất hợp lý — không bị chạy xô, vẫn đủ thời gian ở Hội An.”</p>
+              <footer><cite>Minh Anh · Hà Nội</cite></footer>
+            </blockquote>
+            <blockquote class="review-card">
+              <p>“Tôi thích bộ lọc điểm đến theo chủ đề; tìm được chỗ lặn ở Phú Quốc đúng ý.”</p>
+              <footer><cite>Hữu Tài · TP.HCM</cite></footer>
+            </blockquote>
+            <blockquote class="review-card">
+              <p>“Đội hỗ trợ đổi vé máy bay giúp tôi khi chuyến bay bị delay — rất yên tâm.”</p>
+              <footer><cite>Lan Chi · Đà Nẵng</cite></footer>
+            </blockquote>
+          </div>
+          <button type="button" class="review-nav review-nav--next" aria-label="Lời chứng thực sau"
+            data-review-next>›</button>
+        </div>
+        <div class="review-dots" data-review-dots aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <section id="contact" class="section cta" aria-labelledby="cta-title">
+      <div class="container cta-inner">
+        <div class="cta-copy">
+          <h2 id="cta-title" class="cta-title">Sẵn sàng cho chuyến đi tiếp theo?</h2>
+          <p>Để lại thông tin — chuyên gia của chúng tôi sẽ gọi lại trong 24 giờ (giờ hành chính).</p>
+        </div>
+        <form class="cta-form" data-contact-form>
+          <label class="field field--full" style="display: flex; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="chk-anonymous" style="width: 1.2rem; height: 1.2rem; margin: 0; cursor: pointer;">
+            <span style="font-size: 0.95rem; margin: 0; user-select: none;">Tôi muốn gửi phản hồi ẩn danh (Không cần Tên & Email)</span>
+          </label>
+          <label class="field" id="field-name-wrap">
+            <span class="field-label">Họ tên</span>
+            <input type="text" name="name" id="contact-name" required autocomplete="name" placeholder="Nguyễn Văn A" />
+          </label>
+          <label class="field" id="field-email-wrap">
+            <span class="field-label">Email</span>
+            <input type="email" name="email" id="contact-email" required autocomplete="email" placeholder="ban@email.com" />
+          </label>
+          <label class="field field--full">
+            <span class="field-label">Nội dung phản hồi / yêu cầu (*)</span>
+            <textarea name="message" rows="3" required placeholder="Bạn cần hỗ trợ hoặc muốn góp ý gì cho chúng tôi?"></textarea>
+          </label>
+          <button type="submit" class="btn btn--primary btn--block">Gửi Phản Hồi</button>
+          <p class="form-status" data-form-status role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" data-modal-backdrop hidden></div>
+
+  <div class="modal" id="modal-auth" data-modal="auth" role="dialog" aria-modal="true" aria-labelledby="auth-title"
+    hidden>
+    <div class="modal__inner">
+      <div class="modal__header">
+        <h2 id="auth-title" class="modal__title">Tài khoản WanderViệt</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Đóng">×</button>
+      </div>
+      <div class="modal__body">
+        <p class="modal__lede">Hệ thống bảo mật WanderViệt. Đăng nhập để đồng bộ lịch trình và ưu đãi của bạn.</p>
+        <div class="auth-tabs" role="tablist" style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem">
+          <button type="button" class="auth-tab is-active" role="tab" data-auth-tab="login" aria-selected="true" style="padding:0.4rem; font-size:0.9rem">Đăng nhập</button>
+          <button type="button" class="auth-tab" role="tab" data-auth-tab="register" aria-selected="false" style="padding:0.4rem; font-size:0.9rem">Đăng ký mới</button>
+        </div>
+        <form class="auth-panel" data-auth-panel="login">
+          <label class="field"><span class="field-label">Email</span><input type="email" name="email" required autocomplete="email" /></label>
+          <label class="field"><span class="field-label">Mật khẩu</span><input type="password" name="password" required autocomplete="current-password" /></label>
+          <button type="submit" class="btn btn--primary btn--block">Đăng nhập</button>
+          <p class="auth-msg" data-auth-msg-login role="status"></p>
+        </form>
+        <form class="auth-panel" data-auth-panel="register" hidden>
+          <label class="field"><span class="field-label">Họ tên</span><input type="text" name="name" required autocomplete="name" /></label>
+          <label class="field"><span class="field-label">Email</span><input type="email" name="email" required autocomplete="email" /></label>
+          <label class="field"><span class="field-label">Mật khẩu</span><input type="password" name="password" required autocomplete="new-password" minlength="4" /></label>
+          <input type="hidden" name="isBusiness" value="false" />
+          <button type="submit" class="btn btn--primary btn--block">Tạo tài khoản Khách hàng</button>
+          <p class="auth-msg" data-auth-msg-register role="status"></p>
+        </form>
+      </div>
+    </div>
+  </div>  <div class="modal" id="modal-place" data-modal="place" role="dialog" aria-modal="true" aria-labelledby="place-title" hidden>
+    <div class="modal__inner modal__inner--large" style="max-width:900px; padding:0;">
+      <div class="modal__header" style="position:absolute; top:10px; right:10px; z-index:10; border:none; background:transparent;">
+        <h2 id="place-title" class="visually-hidden">Chi tiết địa điểm</h2>
+        <button type="button" class="modal__close" data-modal-close aria-label="Đóng" style="background:rgba(0,0,0,0.5); color:#fff; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center;">×</button>
+      </div>
+      <div class="modal__body" style="padding:0; max-height:85vh; overflow-y:auto; border-radius:1rem;">
+        <div data-place-detail></div>
+      </div>
+    </div>
+  </div>
+
+    <!-- Booking Modal -->
+    <div data-modal="booking" class="modal" hidden>
+      <div class="modal__inner" style="max-width: 450px; background: #fff; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.2);">
+        <div style="padding: 2rem;">
+          <button class="modal__close" data-modal-close style="position: absolute; top: 1rem; right: 1rem; font-size: 1.5rem;">×</button>
+          <div class="booking-form-wrap">
+            <h3 style="margin-bottom: 0.5rem; color: var(--accent-primary);">📅 Đặt dịch vụ</h3>
+            <p id="booking-place-name" style="font-weight: 600; margin-bottom: 1.5rem; color: #444;"></p>
+            
+            <form id="booking-form">
+              <input type="hidden" id="booking-place-id">
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.9rem; margin-bottom: 0.4rem; font-weight: 600;">Ngày sử dụng</label>
+                <input type="date" id="booking-date" required class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1.5px solid #eee; font-family: inherit;">
+              </div>
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.9rem; margin-bottom: 0.4rem; font-weight: 600;">Số lượng khách</label>
+                <input type="number" id="booking-people" value="1" min="1" required class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1.5px solid #eee; font-family: inherit;">
+              </div>
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="display: block; font-size: 0.9rem; margin-bottom: 0.4rem; font-weight: 600;">Tên người đặt</label>
+                <input type="text" id="booking-customer-name" required class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1.5px solid #eee; font-family: inherit;" placeholder="Nguyễn Văn A">
+              </div>
+              <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 0.9rem; margin-bottom: 0.4rem; font-weight: 600;">Số điện thoại</label>
+                <input type="tel" id="booking-phone" required class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 8px; border: 1.5px solid #eee; font-family: inherit;" placeholder="09xx xxx xxx">
+              </div>
+              <button type="submit" class="btn btn--primary btn--block" style="padding: 1rem; font-weight: 700; font-size: 1rem; letter-spacing: 0.5px;">GỬI YÊU CẦU ĐẶT CHỖ</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <!-- Unified Global Chatbot will be injected here by SharedUI.js?v=1777307000000 -->
+
+
+  <!-- ===== PARTNER LOGOS ===== -->
+  <section class="partners" aria-label="Đối tác của WanderViệt">
+    <div class="container">
+      <p class="partners__label">Đối tác &amp; tin tưởng bởi</p>
+      <div class="partners__logos">
+        <div class="partner-logo">✈️ Vietnam Airlines</div>
+        <div class="partner-logo">🏨 Vinpearl Hotels</div>
+        <div class="partner-logo">🚌 Phương Trang</div>
+        <div class="partner-logo">🛡️ Bảo Việt Travel</div>
+        <div class="partner-logo">🌐 Agoda Vietnam</div>
+        <div class="partner-logo">🚢 Indochina Junk</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== NEWSLETTER ===== -->
+  <section class="newsletter" aria-labelledby="news-title">
+    <div class="container newsletter-inner">
+      <div class="newsletter-content">
+        <h2 id="news-title" class="newsletter-title">Nhận tin tức &amp; Ưu đãi</h2>
+        <p class="newsletter-desc">Đăng ký để nhận những mẹo du lịch bí mật và mã giảm giá độc quyền hàng tuần.</p>
+      </div>
+      <form class="newsletter-form">
+        <input type="email" placeholder="Email của bạn..." required aria-label="Email đăng ký tin tức" />
+        <button type="submit" class="btn btn--primary">Đăng ký</button>
+      </form>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div class="footer-brand">
+        <span class="logo-mark" aria-hidden="true">◈</span> WanderViệt
+        <p class="footer-tagline">Du lịch thông minh — trải nghiệm trọn vẹn.</p>
+      </div>
+      <nav class="footer-nav" aria-label="Liên kết chân trang">
+        <a href="index.html#destinations">Điểm đến</a>
+        <a href="index.html#smart-search">Tìm theo bạn</a>
+        <a href="index.html#planner">Lịch trình</a>
+        <a href="index.html#contact">Liên hệ</a>
+        <span style="color:var(--text-muted); padding: 0 0.5rem">|</span>
+        <a href="http://localhost:3002" style="color:var(--accent-warm)">Đối tác Doanh nghiệp</a>
+      </nav>
+      <p class="footer-copy">© <span data-year></span> WanderViệt. Bản demo front-end: tài khoản và lịch trình lưu cục
+        bộ trên trình duyệt.</p>
+    </div>
+  </footer>
+
+
+  <!-- voice-overlay will be injected by SharedUI.js?v=1777307000000 -->
+
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v=888888888" defer></script>
+  <script src="places-data.js?v=888888888" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.13.11/runtime.min.js?v=888888888" defer></script>
+  <script src="SharedUI.js?v=1777335000000" defer></script>
+  <script src="voice-helper.js?v=1777307000000" defer></script>
+  <script src="chat-brain.js?v=1777307000000" defer></script>
+  <script src="main.js?v=1777307000000" defer></script>
+</body>
+
+</html>

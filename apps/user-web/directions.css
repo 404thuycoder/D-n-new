@@ -1,0 +1,294 @@
+/* public/directions.css */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+/* Sidebar Bảng điều khiển */
+.sidebar {
+  width: 360px;
+  background: white;
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  z-index: 10;
+  transition: transform 0.3s ease;
+}
+
+/* Header sidebar */
+.header {
+  padding: 1rem;
+  background: #2563eb;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.back-btn {
+  color: white;
+  text-decoration: none;
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.header h1 {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Form nhập địa điểm */
+.input-section {
+  padding: 1.5rem 1rem;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.input-group {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.input-box {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid transparent;
+}
+
+.input-box:focus-within {
+  border-color: #2563eb;
+  background: white;
+}
+
+.input-icon {
+  margin-right: 0.5rem;
+  font-size: 1rem;
+}
+
+.input-box input {
+  border: none;
+  background: transparent;
+  width: 100%;
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+/* Đường kẻ nối giữa điểm đi và đến */
+.route-line {
+  position: absolute;
+  left: 20px;
+  top: 30px;
+  bottom: 30px;
+  width: 2px;
+  background-color: #cbd5e1;
+  border-left: 2px dotted #94a3b8;
+  z-index: 1;
+}
+
+.btn-search {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-search:hover {
+  background: #1d4ed8;
+}
+
+/* Lựa chọn phương tiện */
+.modes-section {
+  padding: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  color: #64748b;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  background: #f8fafc;
+}
+
+.mode-btn.active {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+/* Kết quả khoảng cách, thời gian và AI */
+.results-section {
+  padding: 1rem;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.route-summary {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: none; /* Ẩn mặc định */
+}
+
+.route-summary.active {
+  display: block;
+}
+
+.summary-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+
+.summary-meta {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.btn-ai {
+  width: 100%;
+  padding: 0.75rem;
+  background: linear-gradient(135deg, #a855f7, #ec4899);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s;
+}
+
+.btn-ai:hover {
+  opacity: 0.9;
+}
+
+/* Vùng hiển thị AI Advice */
+.ai-advice-box {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fdf4ff;
+  border: 1px solid #fbcfe8;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #831843;
+  display: none; /* Ẩn mặc định */
+}
+
+.ai-advice-box.active {
+  display: block;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Trạng thái lỗi/Tin nhắn */
+#status-message {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: #64748b;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.btn-inline-link {
+  display: inline-block;
+  background: none;
+  border: none;
+  color: #2563eb;
+  text-decoration: underline;
+  font-weight: 600;
+  font-size: inherit;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.btn-inline-link:hover {
+  color: #1d4ed8;
+}
+
+/* Bản đồ */
+.map-container {
+  flex: 1;
+  position: relative;
+  height: 100%;
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Responsive cho điện thoại */
+@media (max-width: 768px) {
+  body {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    height: 45vh; /* Nửa trên cho form */
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  .map-container {
+    height: 55vh; /* Nửa dưới cho map */
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

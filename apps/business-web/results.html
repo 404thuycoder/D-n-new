@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Kết quả tìm kiếm — WanderViệt</title>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="business-design.css?v=2.2" />
+  <style>
+    :root {
+      --side-w: 280px;
+    }
+    
+    body {
+      background: #040914;
+      color: #F8FAFC;
+      margin: 0;
+      font-family: 'Be Vietnam Pro', sans-serif;
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* --- SIDEBAR FILTER --- */
+    .filter-sidebar {
+      width: var(--side-w);
+      background: #060b13;
+      border-right: 1px solid var(--biz-border);
+      padding: 1.5rem;
+      height: 100vh;
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar-nav-top {
+      margin-bottom: 2.5rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.8rem 1rem;
+      color: #94A3B8;
+      text-decoration: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      transition: all 0.2s;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+
+    .filter-group {
+      margin-bottom: 2rem;
+    }
+
+    .filter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .filter-title {
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #64748B;
+    }
+
+    .clear-btn {
+      font-size: 0.75rem;
+      color: #3b82f6;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.4rem 0;
+      cursor: pointer;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+
+    .filter-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #3b82f6;
+    }
+
+    .filter-item .count {
+      margin-left: auto;
+      color: #64748B;
+      font-size: 0.8rem;
+    }
+
+    /* --- MAIN CONTENT --- */
+    .main-content {
+      flex: 1;
+      padding: 2rem 3rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header-section {
+      margin-bottom: 2.5rem;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 2rem;
+    }
+
+    .page-title h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .page-title p {
+      color: #94A3B8;
+      margin: 0.5rem 0 0;
+    }
+
+    .top-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .stat-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--biz-border);
+      border-radius: 20px;
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .stat-icon-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+
+    .stat-box.blue .stat-icon-circle { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .stat-box.green .stat-icon-circle { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .stat-box.purple .stat-icon-circle { background: rgba(168, 85, 247, 0.15); color: #a855f7; }
+    .stat-box.gold .stat-icon-circle { background: rgba(234, 179, 8, 0.15); color: #eab308; }
+
+    .listing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 2rem;
+      margin-bottom: 4rem;
+    }
+
+    .premium-card {
+      background: #0a111e;
+      border: 1px solid var(--biz-border);
+      border-radius: 24px;
+      overflow: hidden;
+      transition: all 0.4s;
+    }
+
+    .card-img-container { height: 200px; position: relative; }
+    .card-img-container img { width: 100%; height: 100%; object-fit: cover; }
+    
+    .card-badge {
+      position: absolute;
+      top: 1rem; left: 1rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: white;
+      backdrop-filter: blur(12px);
+    }
+
+    .badge-diamond { background: linear-gradient(135deg, #3b82f6, #00F0FF); }
+    .badge-platinum { background: linear-gradient(135deg, #10b981, #34d399); }
+    .badge-gold { background: linear-gradient(135deg, #facc15, #eab308); }
+    .badge-silver { background: linear-gradient(135deg, #94a3b8, #64748b); }
+    .badge-bronze { background: linear-gradient(135deg, #b45309, #92400e); }
+
+    .card-content { padding: 1.5rem; }
+    .card-title { font-size: 1.15rem; font-weight: 700; color: white; margin-bottom: 0.5rem; }
+    .card-location { font-size: 0.85rem; color: #94A3B8; margin-bottom: 0.8rem; }
+    .card-rating { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; font-weight: 600; margin-bottom: 1.2rem; }
+    
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    
+    .price-val { font-size: 1.1rem; font-weight: 800; color: white; }
+    .cat-tag { font-size: 0.75rem; font-weight: 700; color: #3b82f6; background: rgba(59,130,246,0.1); padding: 0.4rem 0.8rem; border-radius: 8px; }
+
+    .empty-state {
+      text-align: center;
+      padding: 5rem 2rem;
+      background: rgba(255,255,255,0.02);
+      border-radius: 30px;
+      border: 1px dashed var(--biz-border);
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  
+  <aside class="filter-sidebar">
+    <div class="sidebar-nav-top">
+      <a href="index.html" class="nav-link"><span>🏠</span> Trang chủ hệ sinh thái</a>
+      <a href="business_listing.html" class="nav-link active"><span>📁</span> Tất cả doanh nghiệp</a>
+    </div>
+
+    <div class="filter-group">
+      <div class="filter-header">
+        <div class="filter-title">Bộ lọc tìm kiếm</div>
+      </div>
+      <div id="filterCategory" class="filter-section">
+        <!-- Dynamic filters -->
+      </div>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="header-section">
+      <div class="page-header">
+        <div class="page-title">
+          <h1>Kết quả tìm kiếm</h1>
+          <p id="querySummary">Đang tìm kiếm...</p>
+        </div>
+      </div>
+
+      <div class="top-stats">
+        <div class="stat-box blue">
+          <div class="stat-icon-circle">🏢</div>
+          <div><div id="statCount" class="stat-val">0</div><div class="stat-lbl">Kết quả</div></div>
+        </div>
+        <div class="stat-box green">
+          <div class="stat-icon-circle">🗂️</div>
+          <div><div class="stat-val">12.5K+</div><div class="stat-lbl">Dịch vụ</div></div>
+        </div>
+        <div class="stat-box purple">
+          <div class="stat-icon-circle">💬</div>
+          <div><div class="stat-val">98.7K+</div><div class="stat-lbl">Đánh giá</div></div>
+        </div>
+        <div class="stat-box gold">
+          <div class="stat-icon-circle">⭐</div>
+          <div><div class="stat-val">4.8</div><div class="stat-lbl">Điểm TB</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsGrid" class="listing-grid">
+      <!-- Dynamic results -->
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function formatVnd(num) {
+    if (!num) return 'Liên hệ';
+    return new Intl.NumberFormat('vi-VN').format(num) + ' VND';
+  }
+
+  function getRankInfo(views = 0, bookings = 0, rating = 5) {
+    const score = views * 1 + bookings * 5 + rating * 20;
+    if (score >= 500) return { name: 'DIAMOND', class: 'badge-diamond' };
+    if (score >= 200) return { name: 'PLATINUM', class: 'badge-platinum' };
+    if (score >= 100) return { name: 'GOLD', class: 'badge-gold' };
+    if (score >= 40) return { name: 'SILVER', class: 'badge-silver' };
+    return { name: 'BRONZE', class: 'badge-bronze' };
+  }
+
+  const query = JSON.parse(localStorage.getItem('searchQuery') || '{}');
+  const locQ = (query.location || '').toLowerCase().trim();
+  const svcQ = (query.service || 'Tất cả').trim();
+
+  document.getElementById('querySummary').textContent = `Kết quả cho "${locQ || 'Mọi nơi'}" — Dịch vụ: ${svcQ}`;
+
+  const businesses = JSON.parse(localStorage.getItem('businesses') || '[]');
+  const filtered = businesses.filter(b => {
+    const name = b.name.toLowerCase();
+    const loc = b.location.toLowerCase();
+    const cat = b.category.toLowerCase();
+    
+    const matchLoc = !locQ || name.includes(locQ) || loc.includes(locQ);
+    const matchSvc = svcQ === 'Tất cả' || cat.includes(svcQ.toLowerCase()) || svcQ.toLowerCase().includes(cat);
+    
+    return matchLoc && matchSvc;
+  });
+
+  document.getElementById('statCount').textContent = filtered.length;
+  const grid = document.getElementById('resultsGrid');
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state"><h3>Không tìm thấy kết quả phù hợp</h3><p>Hãy thử thay đổi từ khóa hoặc bộ lọc.</p></div>`;
+  } else {
+    filtered.forEach(b => {
+      const rank = getRankInfo(b.views, b.bookings, b.rating);
+      const card = document.createElement('div');
+      card.className = 'premium-card';
+      card.innerHTML = `
+        <div class="card-img-container">
+          <div class="card-badge ${rank.class}">${rank.name}</div>
+          <img src="${b.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600'}" alt="${b.name}"/>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">${b.name}</h3>
+          <div class="card-location">📍 ${b.location}</div>
+          <div class="card-rating"><span style="color:#facc15">★ ${b.rating || 5}</span> <span style="color:#64748B">(${b.views || 0} lượt xem)</span></div>
+          <div class="card-footer">
+            <div class="price-val">Từ ${formatVnd(b.price)}</div>
+            <div class="cat-tag">${b.category}</div>
+          </div>
+        </div>
+      `;
+      card.onclick = () => {
+        localStorage.setItem('selectedBusiness', JSON.stringify(b));
+        window.location.href = 'detail.html';
+      };
+      grid.appendChild(card);
+    });
+  }
+</script>
+
+</body>
+</html>

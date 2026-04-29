@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chi tiết doanh nghiệp — WanderViệt Partner</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: sans-serif;
+      background: #f9fafb;
+      color: #0f172a;
+    }
+
+    .back-btn {
+      display: inline-block;
+      margin: 1.5rem 2rem;
+      padding: 0.4rem 1rem;
+      background: #1877F2;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .back-btn:hover { background: #166FE5; }
+
+    #notFound {
+      margin: 4rem 2rem;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 1.1rem;
+    }
+
+    .card {
+      max-width: 720px;
+      margin: 0 2rem 3rem 2rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .card__image {
+      width: 100%;
+      height: 280px;
+      object-fit: cover;
+      display: block;
+      background: #e2e8f0;
+    }
+
+    .card__image-placeholder {
+      width: 100%;
+      height: 280px;
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      color: #94a3b8;
+    }
+
+    .card__body {
+      padding: 1.75rem 2rem;
+    }
+
+    .card__meta {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .views {
+      font-size: 0.82rem;
+      color: #94a3b8;
+    }
+
+    .rank-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.3rem 0.9rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      border: 1.5px solid transparent;
+    }
+    .rank-bronze   { background: #fef3c7; color: #92400e; border-color: #d97706; }
+    .rank-silver   { background: #f1f5f9; color: #475569; border-color: #94a3b8; }
+    .rank-gold     { background: #fefce8; color: #854d0e; border-color: #eab308; }
+    .rank-platinum { background: #f0fdf4; color: #166534; border-color: #22c55e; }
+    .rank-diamond  { background: #eff6ff; color: #1e40af; border-color: #3b82f6; }
+
+    .score-bar-wrap {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    .score-bar-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: #64748b;
+      margin-bottom: 0.4rem;
+    }
+    .score-bar-track {
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.6s ease;
+    }
+
+    .card__name {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+
+    .card__location {
+      font-size: 0.95rem;
+      color: #475569;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .card__rating {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .stars { color: #f59e0b; font-size: 1.1rem; letter-spacing: 1px; }
+    .rating-num { font-weight: 600; font-size: 1rem; }
+    .rating-label { font-size: 0.85rem; color: #94a3b8; }
+
+    .card__price {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 1.25rem;
+    }
+    .card__price .per { font-size: 0.85rem; font-weight: 400; color: #64748b; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid #f1f5f9;
+      margin: 1.25rem 0;
+    }
+
+    .card__desc-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 0.5rem;
+    }
+
+    .card__desc {
+      font-size: 0.95rem;
+      line-height: 1.7;
+      color: #334155;
+    }
+
+    .card__footer {
+      padding: 1rem 2rem;
+      background: #f8fafc;
+      border-top: 1px solid #f1f5f9;
+      display: flex;
+      gap: 0.75rem;
+    }
+
+    .btn-primary {
+      flex: 1;
+      padding: 0.75rem;
+      background: #1877F2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-primary:hover { background: #166FE5; }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 0.75rem;
+      background: white;
+      color: #0f172a;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-secondary:hover { background: #f1f5f9; }
+  </style>
+</head>
+<body>
+
+  <a class="back-btn" href="results.html">← Quay lại kết quả</a>
+
+  <div id="notFound" style="display:none">
+    ⚠️ Không tìm thấy dữ liệu doanh nghiệp.<br />
+    <a href="results.html" style="color:#1877F2">← Quay lại tìm kiếm</a>
+  </div>
+
+  <div class="card" id="bizCard" style="display:none">
+
+    <div id="imgWrapper"></div>
+
+    <div class="card__body">
+
+      <div class="card__meta">
+        <span class="badge" id="bizCategory">—</span>
+        <span class="views" id="bizViews"></span>
+        <span id="bizRankBadge"></span>
+      </div>
+
+      <h1 class="card__name" id="bizName">—</h1>
+
+      <p class="card__location">
+        <span>📍</span>
+        <span id="bizLocation">—</span>
+      </p>
+
+      <div class="card__rating">
+        <span class="stars" id="bizStars">★★★★★</span>
+        <span class="rating-num" id="bizRating">—</span>
+        <span class="rating-label" id="bizReviews"></span>
+      </div>
+
+      <div class="card__price" id="bizPrice">—</div>
+
+      <hr class="divider" />
+
+      <p class="card__desc-label">Mô tả</p>
+      <p class="card__desc" id="bizDesc">Chưa có mô tả.</p>
+
+      <div class="score-bar-wrap" id="rankSection">
+        <div class="score-bar-label">
+          <span>Xếp hạng</span>
+          <span id="rankScore"></span>
+        </div>
+        <div class="score-bar-track">
+          <div class="score-bar-fill" id="rankBarFill"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="card__footer">
+      <button id="btnBook" class="btn-primary">Đặt ngay</button>
+      <button class="btn-secondary">Liên hệ</button>
+    </div>
+
+  </div>
+
+  <script>
+    // ── 1. Đọc selectedBusiness từ localStorage ──────────────────
+    var biz = null;
+    try {
+      var raw = localStorage.getItem('selectedBusiness');
+      if (raw) biz = JSON.parse(raw);
+    } catch(e) {}
+
+    if (!biz) {
+      document.getElementById('notFound').style.display = 'block';
+    } else {
+
+    // ── Helper: đồng bộ bẳng cách ghi ngược vào 'businesses' array ──
+    function syncToBusinesses(updatedBiz) {
+      try {
+        var stored = localStorage.getItem('businesses');
+        var list = stored ? JSON.parse(stored) : [];
+        var found = false;
+        list = list.map(function(b) {
+          var matchId  = updatedBiz.id   && b.id   && String(b.id)   === String(updatedBiz.id);
+          var matchMid = updatedBiz._id  && b._id  && String(b._id)  === String(updatedBiz._id);
+          var matchName = b.name === updatedBiz.name && b.location === updatedBiz.location;
+          if (matchId || matchMid || matchName) { found = true; return updatedBiz; }
+          return b;
+        });
+        if (!found) list.push(updatedBiz); // thêm mới nếu chưa có
+        localStorage.setItem('businesses', JSON.stringify(list));
+      } catch(e) {}
+    }
+
+      // ── 2. Tăng views lên 1 ──────────────────────────────────
+      biz.views = (typeof biz.views === 'number' ? biz.views : 0) + 1;
+
+      // ── 3. Lưu lại vào cả 2 keys ──────────────────────────
+      localStorage.setItem('selectedBusiness', JSON.stringify(biz));
+      syncToBusinesses(biz);
+
+      // ── 4. Hiển thị thông tin ────────────────────────────────
+      document.getElementById('bizCard').style.display = 'block';
+
+      // Ảnh
+      var imgWrapper = document.getElementById('imgWrapper');
+      var defaultImg = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80';
+      var img = document.createElement('img');
+      img.className = 'card__image';
+      img.src = biz.image || defaultImg;
+      img.alt = biz.name || 'Ảnh doanh nghiệp';
+      img.onerror = function() {
+        img.src = defaultImg;
+      };
+      imgWrapper.appendChild(img);
+
+      // Tên & danh mục
+      document.getElementById('bizName').textContent     = biz.name     || '—';
+      document.getElementById('bizCategory').textContent = biz.category || '—';
+      document.getElementById('bizLocation').textContent = biz.location || '—';
+
+      // Lượt xem
+      document.getElementById('bizViews').textContent = '👁 ' + biz.views + ' lượt xem';
+
+      // Rating
+      var rating = typeof biz.rating === 'number' ? biz.rating : parseFloat(biz.rating) || null;
+      if (rating !== null) {
+        var fullStars  = Math.floor(rating);
+        var halfStar   = (rating - fullStars) >= 0.5 ? 1 : 0;
+        var emptyStars = 5 - fullStars - halfStar;
+        document.getElementById('bizStars').textContent =
+          '★'.repeat(fullStars) +
+          (halfStar ? '½' : '') +
+          '☆'.repeat(emptyStars);
+        document.getElementById('bizRating').textContent = rating.toFixed(1) + ' / 5';
+        var reviews = biz.reviews || biz.reviewCount || null;
+        if (reviews) {
+          document.getElementById('bizReviews').textContent = '(' + reviews + ' đánh giá)';
+        }
+      } else {
+        document.getElementById('bizStars').textContent  = '☆☆☆☆☆';
+        document.getElementById('bizRating').textContent = 'Chưa có đánh giá';
+      }
+
+      // Giá
+      var price = biz.price || biz.priceFrom || null;
+      if (price) {
+        var priceStr = typeof price === 'number'
+          ? price.toLocaleString('vi-VN') + 'đ'
+          : price;
+        document.getElementById('bizPrice').innerHTML =
+          priceStr + ' <span class="per">/ người</span>';
+      } else {
+        document.getElementById('bizPrice').textContent = 'Liên hệ để biết giá';
+      }
+
+      // Mô tả
+      var desc = biz.description || biz.desc || biz.content || null;
+      document.getElementById('bizDesc').textContent =
+        desc || 'Doanh nghiệp chưa cung cấp mô tả chi tiết.';
+
+      // ── 5. Rank system ──────────────────────────────────────
+      var views    = biz.views    || 0;
+      var bookings = biz.bookings || 0;
+      var ratingV  = parseFloat(biz.rating) || 0;
+      var score    = views * 1 + bookings * 5 + ratingV * 20;
+
+      var rank;
+      if      (score >= 500) rank = { label: 'Diamond',  cls: 'rank-diamond',  icon: '💎', max: 1000 };
+      else if (score >= 200) rank = { label: 'Platinum', cls: 'rank-platinum', icon: '🌟', max: 500  };
+      else if (score >= 100) rank = { label: 'Gold',     cls: 'rank-gold',     icon: '🥇', max: 200  };
+      else if (score >= 40)  rank = { label: 'Silver',   cls: 'rank-silver',   icon: '🥈', max: 100  };
+      else                   rank = { label: 'Bronze',   cls: 'rank-bronze',   icon: '🥉', max: 40   };
+
+      // Badge in meta row
+      var badge = document.getElementById('bizRankBadge');
+      badge.className = 'rank-badge ' + rank.cls;
+      badge.textContent = rank.icon + ' ' + rank.label;
+
+      // Score bar
+      var pct = Math.min(100, Math.round((score / rank.max) * 100));
+      document.getElementById('rankScore').textContent =
+        'Score: ' + Math.round(score) + ' • Next: ' + rank.max;
+      var fill = document.getElementById('rankBarFill');
+      fill.style.width = pct + '%';
+      fill.style.background =
+        rank.cls === 'rank-diamond'  ? '#3b82f6' :
+        rank.cls === 'rank-platinum' ? '#22c55e' :
+        rank.cls === 'rank-gold'     ? '#eab308' :
+        rank.cls === 'rank-silver'   ? '#94a3b8' : '#d97706';
+
+      // Save score back
+      biz.score = score;
+      biz.rank  = rank.label;
+      localStorage.setItem('selectedBusiness', JSON.stringify(biz));
+
+      // ── 6. Book Now button ────────────────────────────────────
+      document.getElementById('btnBook').addEventListener('click', function() {
+        biz.bookings = (typeof biz.bookings === 'number' ? biz.bookings : 0) + 1;
+        // Recalculate score & rank after new booking
+        var newScore = (biz.views||0)*1 + biz.bookings*5 + (parseFloat(biz.rating)||0)*20;
+        biz.score = newScore;
+        localStorage.setItem('selectedBusiness', JSON.stringify(biz));
+        syncToBusinesses(biz); // ── đồng bộ vào 'businesses'
+        alert('Booking successful!');
+      });
+    }
+  </script>
+
+</body>
+</html>

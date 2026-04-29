@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hồ sơ cá nhân — WanderViệt</title>
+    <link rel="stylesheet" href="global-tokens.css">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="profile.css">
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="site-header" id="header-container"></header>
+
+    <main class="profile-page">
+        <!-- Header Hồ sơ -->
+        <div class="profile-header-section glass-card">
+            <div class="profile-cover">
+                <button class="btn-edit-cover">📷 Chỉnh sửa ảnh bìa</button>
+            </div>
+            <div class="container profile-main-info">
+                <div class="profile-avatar-large">
+                    <img src="default-avatar.png" id="user-avatar-big" alt="Avatar">
+                    <button class="btn-change-avatar">📷</button>
+                </div>
+                <div class="profile-text-info">
+                    <h1 id="user-display-name">Đang tải...</h1>
+                    <p id="user-bio" class="user-bio">Chưa có tiểu sử.</p>
+                    <div class="profile-meta">
+                        <span id="user-id-tag" class="glass-chip">ID: user...</span>
+                        <span id="user-rank-badge" class="rank-badge">Hạng Đồng I</span>
+                    </div>
+                </div>
+                <div class="profile-header-actions">
+                    <button class="btn btn--primary" id="edit-profile-btn">✏️ Chỉnh sửa hồ sơ</button>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <div class="container profile-tabs">
+                <button class="tab-item active" data-tab="diary">📖 Nhật ký</button>
+                <button class="tab-item" data-tab="trips">🎒 Chuyến đi</button>
+                <button class="tab-item" data-tab="friends">👥 Bạn bè</button>
+                <button class="tab-item" data-tab="medals">🏆 Thành tích</button>
+            </div>
+        </div>
+
+        <div class="container profile-content-layout">
+            <!-- Cột Trái: Thông tin giới thiệu -->
+            <aside class="profile-aside">
+                <div class="glass-card info-card">
+                    <h4>Giới thiệu</h4>
+                    <ul class="info-list">
+                        <li>📍 Sống tại <strong id="user-location">Việt Nam</strong></li>
+                        <li>📅 Tham gia từ <strong id="user-joined">04/2024</strong></li>
+                        <li>⭐ <strong id="user-points">0</strong> Điểm tích lũy</li>
+                    </ul>
+                </div>
+
+                <div class="glass-card photos-card">
+                    <div class="card-header">
+                        <h4>Ảnh</h4>
+                        <a href="#">Xem tất cả</a>
+                    </div>
+                    <div class="photos-grid" id="profile-photos-preview">
+                        <!-- Injected via JS -->
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Cột Phải: Nội dung Tab -->
+            <section class="profile-main-feed" id="profile-tab-content">
+                <div class="loading-shimmer">Đang tải nội dung...</div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal Chỉnh sửa hồ sơ -->
+    <div class="modal" id="edit-profile-modal">
+        <div class="modal-content glass-card">
+            <div class="modal-header">
+                <h3>Chỉnh sửa hồ sơ</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tên hiển thị</label>
+                    <input type="text" id="edit-name">
+                </div>
+                <div class="form-group">
+                    <label>Tiểu sử (Bio)</label>
+                    <textarea id="edit-bio" placeholder="Giới thiệu ngắn về bản thân..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Số điện thoại</label>
+                    <input type="text" id="edit-phone">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn--primary btn--block" id="save-profile">Lưu thay đổi</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="SharedUI.js"></script>
+    <script src="profile.js"></script>
+</body>
+</html>

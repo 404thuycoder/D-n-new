@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TravelBiz - Nền tảng doanh nghiệp du lịch</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #060b13;
+            --bg-sidebar: #0a111c;
+            --bg-card: #111a27;
+            --bg-input: #151e2c;
+            --accent-blue: #3b82f6;
+            --accent-blue-glow: rgba(59, 130, 246, 0.4);
+            --text-primary: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius-lg: 20px;
+            --radius-md: 12px;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            
+            /* Tier Colors */
+            --diamond: linear-gradient(135deg, #3b82f6, #60a5fa);
+            --platinum: linear-gradient(135deg, #a855f7, #c084fc);
+            --gold: linear-gradient(135deg, #eab308, #fbbf24);
+            --silver: linear-gradient(135deg, #94a3b8, #cbd5e1);
+            --bronze: linear-gradient(135deg, #b45309, #d97706);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 280px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-blue);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 15px var(--accent-blue-glow);
+        }
+
+        .logo-text h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-text p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .nav-menu {
+            list-style: none;
+            margin-bottom: 2.5rem;
+        }
+
+        .nav-item {
+            margin-bottom: 8px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+
+        .nav-link.active {
+            background: var(--accent-blue);
+            color: #fff;
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .sidebar-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin: 2rem 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .clear-filter {
+            font-size: 0.7rem;
+            color: var(--accent-blue);
+            text-transform: none;
+            cursor: pointer;
+            letter-spacing: 0;
+        }
+
+        /* --- FILTERS --- */
+        .filter-section {
+            margin-bottom: 2rem;
+        }
+
+        .filter-group-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            transition: color 0.2s;
+        }
+
+        .filter-option:hover {
+            color: var(--text-primary);
+        }
+
+        .filter-option input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-blue);
+            cursor: pointer;
+        }
+
+        .filter-count {
+            margin-left: auto;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        .price-range {
+            padding: 0 8px;
+        }
+
+        .price-slider {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-input);
+            border-radius: 2px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .price-slider-bar {
+            height: 100%;
+            background: var(--accent-blue);
+            width: 60%;
+            position: absolute;
+            left: 20%;
+        }
+
+        .slider-thumb {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+        }
+
+        .price-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .rating-stars {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #fbbf24;
+            font-size: 0.8rem;
+        }
+
+        .rating-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .tier-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* --- TOPBAR --- */
+        .topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2.5rem;
+            gap: 2rem;
+        }
+
+        .search-container {
+            flex: 1;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 99px;
+            padding: 14px 20px 14px 50px;
+            color: #fff;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 4px var(--accent-blue-glow);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-map {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            color: var(--accent-blue);
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-map:hover {
+            background: var(--accent-blue);
+            color: #fff;
+        }
+
+        .notif-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .notif-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            border: 2px solid var(--bg-main);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-input);
+            padding: 6px 12px 6px 6px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .user-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        /* --- STATS GRID --- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-blue);
+        }
+
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+        .stat-icon.green { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+        .stat-icon.purple { background: rgba(168, 85, 247, 0.1); color: #a855f7; }
+        .stat-icon.gold { background: rgba(234, 179, 8, 0.1); color: #eab308; }
+
+        .stat-info h3 {
+            font-size: 1.75rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .stat-info p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        /* --- TOOLBAR --- */
+        .content-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .content-header h2 {
+            font-size: 1.75rem;
+            font-weight: 800;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sort-select {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            padding: 10px 16px;
+            border-radius: 12px;
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .view-toggle {
+            display: flex;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 4px;
+        }
+
+        .view-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s;
+        }
+
+        .view-btn.active {
+            background: var(--accent-blue);
+            color: #fff;
+        }
+
+        /* --- RESULTS GRID --- */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+            margin-bottom: 3rem;
+        }
+
+        .business-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .business-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+        }
+
+        .card-image-wrap {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+
+        .business-card:hover .card-image {
+            transform: scale(1.1);
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            padding: 6px 12px;
+            border-radius: 99px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .badge-diamond { background: var(--diamond); }
+        .badge-platinum { background: var(--platinum); }
+        .badge-gold { background: var(--gold); }
+        .badge-silver { background: var(--silver); }
+        .badge-bronze { background: var(--bronze); }
+
+        .btn-wishlist {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            transition: all 0.2s;
+        }
+
+        .btn-wishlist:hover {
+            background: #fff;
+            color: #ef4444;
+        }
+
+        .card-content {
+            padding: 20px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+
+        .card-location {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+
+        .card-rating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .rating-num {
+            font-weight: 700;
+            color: #fbbf24;
+            font-size: 0.9rem;
+        }
+
+        .review-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: auto;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .card-price {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .price-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .price-value {
+            font-size: 1.15rem;
+            font-weight: 800;
+        }
+
+        .category-tag {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--accent-blue);
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        /* --- PAGINATION --- */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 2rem;
+        }
+
+        .page-link {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+
+        .page-link:hover {
+            border-color: var(--accent-blue);
+            color: var(--text-primary);
+        }
+
+        .page-link.active {
+            background: var(--accent-blue);
+            color: #fff;
+            border-color: var(--accent-blue);
+        }
+
+        /* --- RESPONSIVE --- */
+        @media (max-width: 1024px) {
+            .sidebar { width: 80px; padding: 1.5rem 1rem; }
+            .logo-text, .nav-link span, .sidebar-title, .filter-section { display: none; }
+            .nav-link { justify-content: center; padding: 12px; }
+            .main-content { padding: 1.5rem; }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .topbar { flex-direction: column; align-items: stretch; gap: 1rem; }
+            .search-container { max-width: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <a href="#" class="logo">
+            <div class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
+                </svg>
+            </div>
+            <div class="logo-text">
+                <h1>TravelBiz</h1>
+                <p>Nền tảng doanh nghiệp du lịch</p>
+            </div>
+        </a>
+
+        <ul class="nav-menu">
+            <li class="nav-item"><a href="#" class="nav-link active">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Tất cả doanh nghiệp</span>
+            </a></li>
+            <li class="nav-item"><a href="#" class="nav-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <span>Doanh nghiệp của tôi</span>
+            </a></li>
+            <li class="nav-item"><a href="#" class="nav-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span>Yêu thích</span>
+            </a></li>
+            <li class="nav-item"><a href="#" class="nav-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Đánh giá của tôi</span>
+            </a></li>
+            <li class="nav-item"><a href="#" class="nav-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                <span>Báo cáo thống kê</span>
+            </a></li>
+            <li class="nav-item"><a href="#" class="nav-link">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span>Cài đặt</span>
+            </a></li>
+        </ul>
+
+        <div class="sidebar-title">
+            <span>Bộ lọc tìm kiếm</span>
+            <span class="clear-filter">Xóa bộ lọc</span>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12h6"/></svg>
+                Danh mục dịch vụ
+            </div>
+            <label class="filter-option">
+                <input type="checkbox" checked>
+                <span>Khách sạn</span>
+                <span class="filter-count">124</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" checked>
+                <span>Tour du lịch</span>
+                <span class="filter-count">86</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox">
+                <span>Ẩm thực</span>
+                <span class="filter-count">64</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox">
+                <span>Vận chuyển</span>
+                <span class="filter-count">42</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox">
+                <span>Giải trí</span>
+                <span class="filter-count">31</span>
+            </label>
+            <div style="font-size: 0.8rem; color: var(--accent-blue); margin-top: 5px; cursor: pointer;">Xem thêm</div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Khoảng giá (VND)
+            </div>
+            <div class="price-range">
+                <div class="price-slider">
+                    <div class="price-slider-bar"></div>
+                    <div class="slider-thumb" style="left: 20%;"></div>
+                    <div class="slider-thumb" style="left: 80%;"></div>
+                </div>
+                <div class="price-labels">
+                    <span>100.000</span>
+                    <span>10.000.000+</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Đánh giá
+            </div>
+            <div class="rating-option">
+                <input type="checkbox">
+                <div class="rating-stars">★★★★★</div>
+                <span class="filter-count">104</span>
+            </div>
+            <div class="rating-option">
+                <input type="checkbox">
+                <div class="rating-stars">★★★★☆</div>
+                <span class="filter-count">231</span>
+            </div>
+            <div class="rating-option">
+                <input type="checkbox">
+                <div class="rating-stars">★★★☆☆</div>
+                <span class="filter-count">342</span>
+            </div>
+        </div>
+
+        <div class="filter-section">
+            <div class="filter-group-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                Hạng doanh nghiệp
+            </div>
+            <label class="filter-option">
+                <input type="checkbox" checked>
+                <div class="tier-indicator" style="background: var(--diamond);"></div>
+                <span>Diamond</span>
+                <span class="filter-count">12</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox" checked>
+                <div class="tier-indicator" style="background: var(--platinum);"></div>
+                <span>Platinum</span>
+                <span class="filter-count">24</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox">
+                <div class="tier-indicator" style="background: var(--gold);"></div>
+                <span>Gold</span>
+                <span class="filter-count">62</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox">
+                <div class="tier-indicator" style="background: var(--silver);"></div>
+                <span>Silver</span>
+                <span class="filter-count">104</span>
+            </label>
+            <label class="filter-option">
+                <input type="checkbox">
+                <div class="tier-indicator" style="background: var(--bronze);"></div>
+                <span>Bronze</span>
+                <span class="filter-count">210</span>
+            </label>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <!-- TOPBAR -->
+        <header class="topbar">
+            <div class="search-container">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="search-input" placeholder="Tìm kiếm doanh nghiệp, dịch vụ...">
+            </div>
+
+            <div class="topbar-actions">
+                <button class="btn-map">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                    Bản đồ
+                </button>
+                <div class="notif-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                    <span class="notif-badge"></span>
+                </div>
+                <div class="user-profile">
+                    <img src="https://ui-avatars.com/api/?name=Viet+Nam&background=3b82f6&color=fff" alt="User" class="user-avatar">
+                    <span class="user-name">Viet Nam</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+            </div>
+        </header>
+
+        <!-- STATS -->
+        <section class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon blue">💎</div>
+                <div class="stat-info">
+                    <h3>1.234</h3>
+                    <p>Doanh nghiệp</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green">🌍</div>
+                <div class="stat-info">
+                    <h3>12.5K+</h3>
+                    <p>Dịch vụ</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple">💬</div>
+                <div class="stat-info">
+                    <h3>98.7K+</h3>
+                    <p>Đánh giá</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon gold">⭐</div>
+                <div class="stat-info">
+                    <h3>4.8</h3>
+                    <p>Điểm trung bình</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONTENT HEADER -->
+        <div class="content-header">
+            <div>
+                <h2>Tất cả doanh nghiệp</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Khám phá các dịch vụ du lịch chất lượng hàng đầu</p>
+            </div>
+            <div class="toolbar">
+                <select class="sort-select">
+                    <option>Sắp xếp: Phổ biến nhất</option>
+                    <option>Mới nhất</option>
+                    <option>Giá thấp nhất</option>
+                    <option>Giá cao nhất</option>
+                </select>
+                <div class="view-toggle">
+                    <div class="view-btn active">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    </div>
+                    <div class="view-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRID -->
+        <div class="results-grid">
+            <!-- Card 1 -->
+            <div class="business-card">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=800&q=80" alt="Hotel" class="card-image">
+                    <div class="card-badge badge-diamond">💎 DIAMOND</div>
+                    <button class="btn-wishlist">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                </div>
+                <div class="card-content">
+                    <h4 class="card-title">InterContinental Đà Nẵng</h4>
+                    <div class="card-location">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Sơn Trà, Đà Nẵng
+                    </div>
+                    <div class="card-rating">
+                        <span class="rating-num">⭐ 4.9</span>
+                        <span class="review-count">(312 đánh giá)</span>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-price">
+                            <span class="price-label">Từ</span>
+                            <span class="price-value">2.850.000 VND</span>
+                        </div>
+                        <span class="category-tag">Khách sạn</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="business-card">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=800&q=80" alt="Tour" class="card-image">
+                    <div class="card-badge badge-platinum">🌟 PLATINUM</div>
+                    <button class="btn-wishlist">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                </div>
+                <div class="card-content">
+                    <h4 class="card-title">Tour Hạ Long 2N1Đ</h4>
+                    <div class="card-location">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Hạ Long, Quảng Ninh
+                    </div>
+                    <div class="card-rating">
+                        <span class="rating-num">⭐ 4.8</span>
+                        <span class="review-count">(243 đánh giá)</span>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-price">
+                            <span class="price-label">Từ</span>
+                            <span class="price-value">1.450.000 VND</span>
+                        </div>
+                        <span class="category-tag">Tour du lịch</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="business-card">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=800&q=80" alt="Resort" class="card-image">
+                    <div class="card-badge badge-gold">🥇 GOLD</div>
+                    <button class="btn-wishlist">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                </div>
+                <div class="card-content">
+                    <h4 class="card-title">Vinpearl Resort Phú Quốc</h4>
+                    <div class="card-location">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Phú Quốc, Kiên Giang
+                    </div>
+                    <div class="card-rating">
+                        <span class="rating-num">⭐ 4.7</span>
+                        <span class="review-count">(186 đánh giá)</span>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-price">
+                            <span class="price-label">Từ</span>
+                            <span class="price-value">3.200.000 VND</span>
+                        </div>
+                        <span class="category-tag">Khách sạn</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="business-card">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1512100356956-c1227c331f01?auto=format&fit=crop&w=800&q=80" alt="Food" class="card-image">
+                    <div class="card-badge badge-silver">🥈 SILVER</div>
+                    <button class="btn-wishlist">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                </div>
+                <div class="card-content">
+                    <h4 class="card-title">Nhà Hàng Ngon Huế</h4>
+                    <div class="card-location">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Huế, Thừa Thiên Huế
+                    </div>
+                    <div class="card-rating">
+                        <span class="rating-num">⭐ 4.6</span>
+                        <span class="review-count">(98 đánh giá)</span>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-price">
+                            <span class="price-label">Từ</span>
+                            <span class="price-value">250.000 VND</span>
+                        </div>
+                        <span class="category-tag">Ẩm thực</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 5 -->
+            <div class="business-card">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?auto=format&fit=crop&w=800&q=80" alt="Town" class="card-image">
+                    <div class="card-badge badge-bronze">🥉 BRONZE</div>
+                    <button class="btn-wishlist">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                </div>
+                <div class="card-content">
+                    <h4 class="card-title">Khách Sạn Hội An River</h4>
+                    <div class="card-location">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Hội An, Quảng Nam
+                    </div>
+                    <div class="card-rating">
+                        <span class="rating-num">⭐ 4.3</span>
+                        <span class="review-count">(76 đánh giá)</span>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-price">
+                            <span class="price-label">Từ</span>
+                            <span class="price-value">950.000 VND</span>
+                        </div>
+                        <span class="category-tag">Khách sạn</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 6 -->
+            <div class="business-card">
+                <div class="card-image-wrap">
+                    <img src="https://images.unsplash.com/photo-1506461883276-594a12b11cf3?auto=format&fit=crop&w=800&q=80" alt="Sapa" class="card-image">
+                    <div class="card-badge badge-gold">🥇 GOLD</div>
+                    <button class="btn-wishlist">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </button>
+                </div>
+                <div class="card-content">
+                    <h4 class="card-title">Tour Sapa 3N2Đ</h4>
+                    <div class="card-location">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Sapa, Lào Cai
+                    </div>
+                    <div class="card-rating">
+                        <span class="rating-num">⭐ 4.7</span>
+                        <span class="review-count">(132 đánh giá)</span>
+                    </div>
+                    <div class="card-footer">
+                        <div class="card-price">
+                            <span class="price-label">Từ</span>
+                            <span class="price-value">1.890.000 VND</span>
+                        </div>
+                        <span class="category-tag">Tour du lịch</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGINATION -->
+        <div class="pagination">
+            <div class="page-link active">1</div>
+            <div class="page-link">2</div>
+            <div class="page-link">3</div>
+            <div class="page-link">4</div>
+            <div class="page-link">5</div>
+            <div class="page-link">...</div>
+            <div class="page-link">25</div>
+            <div class="page-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+        </div>
+    </main>
+
+</body>
+</html>

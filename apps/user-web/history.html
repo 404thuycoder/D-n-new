@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lịch sử hoạt động - WanderViệt</title>
+  <link rel="stylesheet" href="global-tokens.css">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at 50% -20%, #1e293b 0%, #0f172a 100%);
+    }
+    body {
+      background: var(--bg-gradient);
+      min-height: 100vh;
+    }
+    .history-hero {
+      padding: 6rem 0 3rem;
+      text-align: center;
+      background: linear-gradient(to bottom, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 0.8) 100%);
+    }
+    .history-hero h1 {
+      font-size: 3rem;
+      font-family: var(--font-display);
+      margin-bottom: 1rem;
+      background: linear-gradient(to right, #fff, var(--primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .history-tabs-container {
+      position: sticky;
+      top: 72px;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 2rem;
+    }
+    
+    .history-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      padding: 1rem;
+      max-width: 1200px;
+      margin: 0 auto;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .history-tabs::-webkit-scrollbar { display: none; }
+
+    .history-tab {
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.3s var(--ease);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .history-tab.is-active {
+      background: var(--gradient-primary);
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
+      border-color: transparent;
+    }
+
+    .history-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 2rem 5rem;
+    }
+
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .history-card {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 20px;
+      padding: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      gap: 1.5rem;
+      transition: transform 0.3s ease;
+    }
+    .history-card:hover {
+      transform: translateY(-4px);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .history-card__media {
+      width: 120px;
+      height: 120px;
+      border-radius: 16px;
+      background-size: cover;
+      background-position: center;
+      flex-shrink: 0;
+    }
+    .history-card__content {
+      flex: 1;
+    }
+    .history-card__type {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      margin-bottom: 0.5rem;
+      font-weight: 700;
+    }
+    .history-card__title {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+    .history-card__meta {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    .history-card__text {
+      font-style: italic;
+      line-height: 1.6;
+      color: var(--text);
+      background: rgba(0, 0, 0, 0.2);
+      padding: 1rem;
+      border-radius: 12px;
+    }
+
+    .trip-card {
+      background: var(--gradient-dark);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .trip-status {
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .status-completed { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+    .status-planning { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+
+    .empty-state {
+      text-align: center;
+      padding: 5rem 2rem;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 24px;
+      border: 1px dashed rgba(255, 255, 255, 0.1);
+    }
+
+    /* Grid for Wishlist tab */
+    .wishlist-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header" id="header-container"></header>
+
+  <section class="history-hero">
+    <div class="container">
+      <h1>Lịch sử hoạt động</h1>
+      <p class="text-muted">Xem lại hành trình, đánh giá và những khoảnh khắc của bạn cùng WanderViệt.</p>
+    </div>
+  </section>
+
+  <div class="history-tabs-container">
+    <div class="history-tabs">
+      <div class="history-tab is-active" data-tab="wishlist">❤️ Yêu thích</div>
+      <div class="history-tab" data-tab="trips">🎒 Chuyến đi & Tour</div>
+      <div class="history-tab" data-tab="reviews">⭐ Đánh giá địa điểm</div>
+      <div class="history-tab" data-tab="feedbacks">💬 Phản hồi hệ thống</div>
+    </div>
+  </div>
+
+  <div class="history-container">
+    <div id="history-content">
+      <!-- Content will be injected here -->
+      <div style="text-align: center; padding: 4rem;">
+        <div class="btn-loading" style="width: 40px; height: 40px; margin: 0 auto 1rem;"></div>
+        <p>Đang tải dữ liệu thực tế...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="SharedUI.js?v=1777335000000"></script>
+  <script src="places-data.js"></script>
+  <script>
+    (function() {
+      const content = document.getElementById('history-content');
+      const tabs = document.querySelectorAll('.history-tab');
+      let currentTab = 'wishlist';
+      let PLACES = [];
+      const token = localStorage.getItem('wander_token');
+
+      // Data stores for event delegation
+      const placeStore = {};
+      const tripStore = {};
+
+      async function init() {
+        if (!token) {
+          content.innerHTML = '<div class="empty-state"><h2>Vui lòng đăng nhập</h2><p>Bạn cần đăng nhập để xem lịch sử hoạt động.</p><button class="btn btn--primary" onclick="WanderUI.openAuthModal()">Đăng nhập ngay</button></div>';
+          return;
+        }
+
+        try {
+          const res = await fetch('/api/places?t=' + Date.now());
+          const json = await res.json();
+          PLACES = json.success ? json.data : (window.WANDER_PLACES || []);
+        } catch(e) {
+          PLACES = window.WANDER_PLACES || [];
+        }
+
+        // Pre-populate placeStore from static data
+        PLACES.forEach(p => { if (p.id) placeStore[p.id] = p; });
+
+        loadTabData(currentTab);
+      }
+
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('is-active'));
+          tab.classList.add('is-active');
+          currentTab = tab.getAttribute('data-tab');
+          loadTabData(currentTab);
+        });
+      });
+
+      async function loadTabData(tab) {
+        content.innerHTML = '<div style="text-align: center; padding: 4rem;"><div class="btn-loading" style="width: 40px; height: 40px; margin: 0 auto 1rem;"></div><p>Đang truy xuất dữ liệu...</p></div>';
+        
+        try {
+          if (tab === 'wishlist') {
+            renderWishlist();
+          } else if (tab === 'trips') {
+            const res = await fetch('/api/planner/my-trips', { headers: { 'x-auth-token': token } });
+            const json = await res.json();
+            renderTrips(json.data || []);
+          } else if (tab === 'reviews') {
+            const res = await fetch('/api/places/my-reviews', { headers: { 'x-auth-token': token } });
+            const json = await res.json();
+            renderReviews(json.data || []);
+          } else if (tab === 'feedbacks') {
+            const res = await fetch('/api/feedback/my-feedbacks', { headers: { 'x-auth-token': token } });
+            const json = await res.json();
+            renderFeedbacks(json.data || []);
+          }
+        } catch(e) {
+          content.innerHTML = '<div class="empty-state"><h2>Lỗi tải dữ liệu</h2><p>Không thể kết nối với máy chủ. Vui lòng thử lại sau.</p></div>';
+        }
+      }
+
+      function budgetLabel(b) {
+        if (b === 3 || b === '3' || b === 'cao cấp') return 'Cao cấp';
+        if (b === 2 || b === '2' || b === 'cân bằng') return 'Cân bằng';
+        return 'Tiết kiệm';
+      }
+      function paceVi(p) {
+        if (!p) return 'Vừa phải';
+        const map = { 'thong thả': 'Thong thả', 'vừa phải': 'Cân bằng', 'năng động': 'Năng động', 'cham': 'Thong thả', 'vua': 'Cân bằng', 'nhanh': 'Năng động' };
+        return map[p.toLowerCase()] || p;
+      }
+
+      function renderWishlist() {
+        const wishlistIds = JSON.parse(localStorage.getItem('wander_wishlist') || '[]');
+        const favs = PLACES.filter(p => wishlistIds.includes(p.id));
+        
+        if (!favs.length) {
+          content.innerHTML = '<div class="empty-state"><h2>Chưa có địa điểm yêu thích</h2><p>Khám phá và lưu lại những nơi bạn muốn đến.</p></div>';
+          return;
+        }
+
+        content.innerHTML = '<div class="wishlist-grid">' + favs.map(p => {
+          const verifiedBadge = p.verified ? '<div class="verified-badge"><span class="icon">🛡️</span> Đã kiểm duyệt</div>' : '';
+          const heroImage = (p.images && p.images[0]) || p.image || '';
+          const budgetTxt = budgetLabel(p.budget);
+          const paceTxt = paceVi(p.pace);
+          
+          return `
+            <div class="dest-card animate-in" style="cursor:pointer;" onclick="if(window.WanderUI) WanderUI.openPlaceDetail('${p.id}')">
+              <div class="dest-card-media">
+                <img src="${heroImage}" alt="${p.name}" class="dest-card-img" loading="lazy">
+                ${verifiedBadge}
+              </div>
+              <div class="dest-card-body">
+                <h3 class="dest-card-title" style="color:#fff; margin:0 0 4px; font-size:1.25rem;">${p.name}</h3>
+                <p class="dest-card-meta" style="color:var(--accent); font-size:0.85rem; margin-bottom:12px; font-weight:600;">${p.region} · ${budgetTxt}</p>
+                <div class="dest-card-tags" style="display:flex; gap:8px; margin-bottom:16px;">
+                  <span class="dest-tag" style="background:rgba(56,189,248,0.1); color:var(--accent); padding:4px 10px; border-radius:8px; font-size:0.75rem; font-weight:700;">${paceTxt}</span>
+                  <span class="dest-tag" style="background:rgba(244,63,94,0.1); color:#f43f5e; padding:4px 10px; border-radius:8px; font-size:0.75rem; font-weight:700;">${p.favoritesCount || 0} ❤️</span>
+                </div>
+                <div class="dest-card-actions">
+                  <button class="btn btn--primary btn--small" style="width:100%; justify-content:center;">Xem chi tiết</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('') + '</div>';
+      }
+
+      function renderTrips(trips) {
+        if (!trips.length) {
+          content.innerHTML = '<div class="empty-state"><h2>Chưa có lịch trình nào</h2><p>Hãy bắt đầu lên kế hoạch cho chuyến đi đầu tiên của bạn.</p></div>';
+          return;
+        }
+
+        trips.forEach(t => { tripStore[t._id] = t; });
+
+        content.innerHTML = '<div class="history-list">' + trips.map(t => `
+          <div class="history-card trip-card">
+            <div class="history-card__content">
+              <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div class="history-card__type">Lịch trình du lịch</div>
+                <span class="trip-status status-${t.status}">${t.status === 'completed' ? 'Đã hoàn thành' : 'Đang lên kế hoạch'}</span>
+              </div>
+              <h3 class="history-card__title">${t.destination}</h3>
+              <p class="history-card__meta">📅 Khởi hành: ${t.tripDate ? new Date(t.tripDate).toLocaleDateString('vi-VN') : 'Chưa định ngày'} · ⏱️ ${t.days} ngày</p>
+              <div class="dest-card-actions">
+                <button class="btn btn--ghost btn--small btn-trip-detail" data-trip-id="${t._id}">Xem lịch trình</button>
+              </div>
+            </div>
+          </div>
+        `).join('') + '</div>';
+      }
+
+      function renderReviews(reviews) {
+        if (!reviews.length) {
+          content.innerHTML = '<div class="empty-state"><h2>Chưa có đánh giá nào</h2><p>Chia sẻ cảm nhận của bạn về những nơi đã đi qua.</p></div>';
+          return;
+        }
+
+        content.innerHTML = '<div class="history-list">' + reviews.map(r => `
+          <div class="history-card">
+            <div class="history-card__media" style="background-image:url('${r.placeImage}')"></div>
+            <div class="history-card__content">
+              <div class="history-card__type">Đánh giá địa điểm</div>
+              <h3 class="history-card__title">${r.placeName}</h3>
+              <p class="history-card__meta">⭐️ ${r.rating}/5 · 📅 ${new Date(r.createdAt).toLocaleDateString('vi-VN')}</p>
+              <div class="history-card__text">"${r.text}"</div>
+              <div class="dest-card-actions" style="margin-top: 1rem;">
+                <button class="btn btn--primary btn--small btn-place-detail" data-place-id="${r.placeId}">Chi tiết</button>
+              </div>
+            </div>
+          </div>
+        `).join('') + '</div>';
+      }
+
+      function renderFeedbacks(fbs) {
+        if (!fbs.length) {
+          content.innerHTML = '<div class="empty-state"><h2>Chưa có phản hồi hệ thống</h2><p>Góp ý của bạn giúp WanderViệt ngày càng hoàn thiện hơn.</p></div>';
+          return;
+        }
+
+        content.innerHTML = '<div class="history-list">' + fbs.map(f => `
+          <div class="history-card">
+            <div class="history-card__content">
+              <div class="history-card__type">Phản hồi trang web</div>
+              <h3 class="history-card__title">Góp ý hệ thống</h3>
+              <p class="history-card__meta">📅 Gửi ngày: ${new Date(f.createdAt).toLocaleDateString('vi-VN')}</p>
+              <div class="history-card__text">"${f.message}"</div>
+            </div>
+          </div>
+        `).join('') + '</div>';
+      }
+
+      // Event delegation for detail buttons
+      content.addEventListener('click', function(e) {
+        const placeBtn = e.target.closest('.btn-place-detail');
+        if (placeBtn) {
+          const pid = placeBtn.dataset.placeId;
+          const localData = placeStore[pid] || null;
+          if (window.WanderUI) WanderUI.openPlaceDetail(pid, localData);
+          return;
+        }
+        const tripBtn = e.target.closest('.btn-trip-detail');
+        if (tripBtn) {
+          const tid = tripBtn.dataset.tripId;
+          const localData = tripStore[tid] || null;
+          if (window.WanderUI) WanderUI.openItineraryDetail(tid, localData);
+          return;
+        }
+      });
+
+      init();
+    })();
+  </script>
+</body>
+</html>

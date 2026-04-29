@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WanderViệt — AI Lên Lịch Trình</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css?v=1776819067182" />
+  <link rel="stylesheet" href="planner.css?v=1776819067182" />
+</head>
+
+<body>
+  <!-- HEADER GIỐNG TRANG CHỦ -->
+  <header class="site-header" data-header>
+    <div class="container header-inner">
+      <a href="index.html" class="logo" aria-label="WanderViệt — Trang chủ">
+        <span class="logo-mark" aria-hidden="true">◈</span>
+        WanderViệt
+      </a>
+
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="site-nav" data-nav-toggle>
+        <span class="nav-toggle-bar"></span>
+        <span class="visually-hidden">Mở menu</span>
+      </button>
+
+      <nav id="site-nav" class="site-nav" data-nav>
+        <ul class="nav-list">
+          <li><a href="index.html" class="nav-link">🏠 Trang chủ</a></li>
+          <li><a href="index.html#destinations" class="nav-link">📍 Điểm du lịch</a></li>
+          <li><a href="planner.html" class="nav-link active">✨ AI Trợ lý</a></li>
+          <li><a href="my-trips.html" class="nav-link">🎒 Chuyến đi</a></li>
+          <li><a href="quests.html" class="nav-link">🎯 Nhiệm vụ</a></li>
+          <li><a href="leaderboard.html" class="nav-link">🏆 BXH</a></li>
+        </ul>
+      </nav>
+
+      <div class="header-actions">
+        <button type="button" class="btn-icon notif-btn-user" onclick="WanderUI.toggleNotificationDrawer()" aria-label="Thông báo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="wander-notif-badge" data-notif-badge></span>
+        </button>
+
+        <button type="button" class="btn-icon" data-open-settings title="Cài đặt">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+
+        <button type="button" class="btn btn--sm btn--primary" data-auth-open data-auth-hide>Tham gia</button>
+
+        <div class="user-bubble" data-user-bubble data-auth-show style="display:none">
+          <span id="header-user-rank" style="font-size:0.75rem;font-weight:700;margin-right:4px;opacity:0.9;"></span>
+          <button type="button" class="user-bubble__btn" data-user-toggle aria-expanded="false" aria-haspopup="true" aria-label="Menu tài khoản">
+            <img src="" alt="Avatar" class="user-avatar-img" data-user-avatar hidden />
+            <span class="user-bubble__initial" data-user-initial>?</span>
+          </button>
+          <div class="user-dropdown" data-user-dropdown hidden>
+            <div class="user-dropdown__header">
+              <p class="user-dropdown__name" data-user-name></p>
+            </div>
+            <div class="user-dropdown__body">
+              <button type="button" class="user-dropdown__item" data-open-profile>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                Hồ sơ của tôi
+              </button>
+              
+              <div class="user-dropdown__divider"></div>
+              <button type="button" class="user-dropdown__item user-dropdown__item--danger" data-logout>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding-top: 6rem; padding-bottom: 4rem;">
+    <div class="planner-container">
+      
+      <!-- FORM NHẬP LIỆU - Bước 1 và Bước 2 -->
+      <aside class="planner-form-card">
+        <h1 class="planner-form-title">
+          <span style="font-size: 2rem;">✨</span> Thiết Kế Lịch Trình AI
+        </h1>
+        <p style="color: var(--text-muted); margin-bottom: 2rem; line-height: 1.5;">
+          Trả lời vài câu hỏi, AI sẽ hiểu bạn và lên lịch thật hợp lý!
+        </p>
+
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem;">
+          <button type="button" id="btnModeForm" class="planner-btn" style="flex: 1; font-size: 0.85rem; padding: 0.6rem; background: var(--bg-card); color: var(--text); border: 1px solid var(--border);">
+            📝 Nhập Form
+          </button>
+          <button type="button" id="btnModeDiscovery" class="planner-btn" style="flex: 1; font-size: 0.85rem; padding: 0.6rem; background: var(--bg-card); color: var(--text); border: 1px solid var(--border);">
+            🔍 AI Gợi ý điểm đến
+          </button>
+        </div>
+
+        <!-- BƯỚC 1: Thông tin cơ bản -->
+        <div id="stepBasic">
+          <form id="aiPlannerForm">
+            <div class="planner-form-group">
+              <label class="planner-form-label" for="dest">📍 Bạn muốn đi đâu?</label>
+              <input type="text" id="dest" name="destination" class="planner-input" placeholder="VD: Đà Lạt, Phú Quốc, Hà Giang" required>
+            </div>
+
+            <div class="planner-form-group" id="groupDays">
+              <label class="planner-form-label" for="days">📆 Đi bao nhiêu ngày?</label>
+              <input type="number" id="days" name="days" class="planner-input" placeholder="VD: 3" min="1" max="14" required>
+            </div>
+
+            <div class="planner-form-group" id="groupTime" style="display:none;">
+              <label class="planner-form-label" for="outingTime">⏰ Bạn định đi lúc mấy giờ?</label>
+              <input type="text" id="outingTime" name="outingTime" class="planner-input" placeholder="VD: 20:00, 9h tối...">
+            </div>
+
+            <div class="planner-form-group">
+              <label class="planner-form-label" for="tripDate">📅 Ngày khởi hành</label>
+              <input type="date" id="tripDate" name="tripDate" class="planner-input">
+              <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.4rem;">Khi đến ngày, WanderViệt sẽ nhắc nhở bạn! 🔔</p>
+            </div>
+
+            <div class="planner-form-group">
+              <label class="planner-form-label" for="budget">💰 Hạn mức chi tiêu (của cả chuyến)</label>
+              <select id="budget" name="budget" class="planner-input">
+                <option value="dưới 1 triệu VNĐ">Sinh viên / Phượt bụi (Dưới 1M VNĐ)</option>
+                <option value="1 đến 3 triệu VNĐ">Tiết kiệm / Phổ thông (1M - 3M VNĐ)</option>
+                <option value="3 đến 7 triệu VNĐ" selected>Trung lưu / Tiêu chuẩn (3M - 7M VNĐ)</option>
+                <option value="7 đến 15 triệu VNĐ">Thương gia / Cao cấp (7M - 15M VNĐ)</option>
+                <option value="trên 15 triệu VNĐ">Siêu sang / Luxury (Trên 15M VNĐ)</option>
+                <option value="Không quan tâm hạn mức">Không quan tâm hạn mức / Tùy ý AI chọn</option>
+              </select>
+            </div>
+
+            <div class="planner-form-group">
+              <label class="planner-form-label" for="companion">👥 Bạn đi cùng ai?</label>
+              <select id="companion" name="companion" class="planner-input">
+                <option value="Một mình">Một mình (Solo)</option>
+                <option value="Cặp đôi">Cặp đôi / Người yêu</option>
+                <option value="Gia đình">Gia đình (Có người già/trẻ em)</option>
+                <option value="Bạn bè" selected>Nhóm bạn thân</option>
+                <option value="Đồng nghiệp">Đồng nghiệp / Công ty</option>
+              </select>
+            </div>
+
+            <div class="planner-form-group">
+              <label class="planner-form-label" for="objective">🎯 Mục tiêu chính?</label>
+              <select id="objective" name="objective" class="planner-input">
+                <option value="Nghỉ dưỡng">Nghỉ dưỡng & Thư giãn</option>
+                <option value="Khám phá">Khám phá & Trải nghiệm</option>
+                <option value="Chụp ảnh">Chụp ảnh / Sống ảo</option>
+                <option value="Ẩm thực" selected>Thưởng thức ẩm thực</option>
+                <option value="Lễ hội">Tham gia lễ hội / Sự kiện</option>
+              </select>
+            </div>
+
+            <button type="submit" class="planner-btn" id="generateBtn">
+              💬 Tiếp tục — AI sẽ hỏi thêm
+            </button>
+          </form>
+        </div>
+
+        <!-- BƯỚC 2: TRỢ LÝ THÔNG MINH (Smart Wizard) -->
+        <div id="stepSmartWizard" style="display:none;">
+          <div id="smartChatArea" class="planner-chat-messages"></div>
+          
+          <div id="smartOptionsArea" class="smart-wizard-group">
+            <!-- Chips/Grouped selections go here -->
+          </div>
+
+          <div id="smartInputArea" class="planner-chat-input-row">
+            <form id="smartChatForm" style="display:flex; width:100%; gap:0.5rem;">
+              <input type="text" id="smartChatInput" class="planner-input" placeholder="Nhập câu trả lời hoặc chọn phía trên..." autocomplete="off">
+              <button type="submit" class="planner-btn" style="width:auto; padding: 0.75rem 1.25rem;">Gửi →</button>
+            </form>
+          </div>
+
+          <div id="smartConfirmationArea" style="display:none; text-align:center; margin-top:1.5rem;">
+            <div id="detectedDataSummary" style="background: var(--bg-card); padding:1.25rem; border-radius:1rem; margin-bottom:1.5rem; text-align:left; border:1px solid var(--border);"></div>
+            <button id="btnFinalGenerate" class="planner-btn" style="background: linear-gradient(135deg, #7c3aed, #4f46e5);">
+              🚀 Lên lịch trình ngay!
+            </button>
+          </div>
+        </div>
+
+        <!-- BƯỚC KHÁM PHÁ: AI gợi ý điểm đến -->
+        <div id="stepDiscovery" style="display:none;">
+          <div id="discoveryMessages" class="planner-chat-messages" style="max-height: 450px;"></div>
+          <form id="discoveryForm" class="planner-chat-input-row">
+            <input type="text" id="discoveryInput" class="planner-input" placeholder="VD: 5 triệu đi đâu mát mẻ?" autocomplete="off">
+            <button type="submit" class="planner-btn" style="width:auto; padding: 0.7rem 1.2rem; white-space:nowrap;">Hỏi AI</button>
+          </form>
+          <div id="discoveryChips" class="planner-chat-chips"></div>
+          
+          <div id="discoveryActionBox" style="display:none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dashed var(--border);">
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.75rem;">Bạn đã chọn được điểm đến? Hãy nhấn để tiếp tục:</p>
+            <button id="btnAcceptDiscovery" class="planner-btn" style="background: linear-gradient(135deg, #10b981, #059669);">
+              ✅ Đồng ý, lên lịch trình ngay!
+            </button>
+          </div>
+        </div>
+      </aside>
+
+
+
+
+      <!-- KẾT QUẢ RENDER -->
+      <section class="planner-result">
+        
+        <!-- Trạng thái trống -->
+        <div id="resultPlaceholder" class="result-placeholder">
+          <svg fill="currentColor" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 9h-2V7h-2v5H6v2h2v5h2v-5h2v-2z"></path></svg>
+          <h2>Lịch trình của bạn sẽ xuất hiện ở đây</h2>
+          <p>Điền thông tin bên trái và nhấn Tạo để bắt đầu.</p>
+        </div>
+
+        <!-- Trạng thái loading -->
+        <div id="aiLoader" class="ai-loader">
+          <div class="ai-loader-spinner"></div>
+          <h3 style="color: var(--color-primary); margin-bottom: 0.5rem;">AI Đang Suy Nghĩ...</h3>
+          <p style="color: var(--text-muted); text-align: center;">Đang lùng sục vé số, kiểm tra khách sạn và ráp lịch cho bạn.<br>Vui lòng đợi 5-10 giây.</p>
+        </div>
+
+        <!-- Trạng thái có kết quả -->
+        <!-- Trạng thái có kết quả -->
+        <div id="viewModeHeader" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 2rem; background: var(--bg-elevated); padding: 1.25rem 1.5rem; border-radius: 1rem; border: 2px solid var(--accent, #10b981);">
+          <div>
+            <h3 style="color: var(--color-primary); margin: 0; font-size: 1.2rem;">📂 Chế độ Xem Lịch Trình đã lưu</h3>
+            <p style="margin: 0.25rem 0 0; font-size: 0.9rem; color: var(--text-muted);">Bạn đang xem lại lịch trình từ bộ sưu tập của mình.</p>
+          </div>
+          <a href="my-trips.html" class="btn btn--ghost" style="padding: 0.5rem 1rem; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>🔙 Quay lại danh sách</span>
+          </a>
+        </div>
+
+        <div id="timelineResult" style="display: none;">
+          <!-- Tabs Lịch sử phiên bản -->
+          <div id="versionTabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.5rem;">
+            <!-- Render V1, V2... -->
+          </div>
+
+          <!-- Nội dung bản thân Timeline (Render vào đây) -->
+          <div id="timelineContent"></div>
+
+          <!-- Tương tác với KQ (Lưu Nháp) -->
+          <div style="text-align: center; margin-top: 3rem; margin-bottom: 1rem;">
+            <button type="button" id="btnSaveTrip" class="planner-btn" style="background: linear-gradient(135deg, #f43f5e, #e11d48); max-width: 300px; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; font-size: 1.2rem;">
+              ♥️ Lưu Lịch Trình Này
+            </button>
+            <p id="saveTripStatus" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.75rem; display: none;"></p>
+          </div>
+        </div>
+
+        <!-- Khung trò chuyện để Sửa Lịch Trình (ẩn mặc định) -->
+        <div id="refineBox" style="display: none; margin-top: 2rem; background: var(--bg-elevated); padding: 1.5rem; border-radius: 1rem; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
+          <h3 style="font-size: 1.1rem; margin-bottom: 0.5rem;">Không ưng ý? Góp ý để AI sửa lại:</h3>
+          <form id="refineForm" style="display: flex; gap: 0.5rem;">
+            <input type="text" id="refineInput" class="planner-input" placeholder="VD: Tôi muốn dậy muộn hơn lúc 10h, và không ăn hải sản..." required style="flex: 1;">
+            <button type="submit" class="planner-btn" style="width: auto; padding: 0.75rem 1.5rem;" id="refineBtn">Sửa lại</button>
+          </form>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <script src="SharedUI.js?v=1777335000000" defer></script>
+  <script src="chat-brain.js"></script>
+  <script src="main.js?v=1777307000000" defer></script>
+  <script src="planner.js?v=1776819067182"></script>
+</body>
+</html>

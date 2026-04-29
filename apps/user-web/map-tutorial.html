@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Lấy Vị Trí và Chỉ Đường (Leaflet + OSRM)</title>
+
+    <!-- 1. Tải CSS của thư viện Bản đồ Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v=1776819067181" crossorigin=""/>
+
+    <!-- CSS (Giao diện đơn giản) -->
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f2f5; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        
+        /* Bảng điều khiển */
+        .controls { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .input-group { display: flex; gap: 10px; }
+        input[type="text"] { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        .btn-location { background-color: #ef4444; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-location:hover { background-color: #dc2626; }
+        
+        .btn-route { background-color: #2563eb; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; }
+        .btn-route:hover { background-color: #1d4ed8; }
+
+        /* Chọn phương tiện */
+        .modes { display: flex; gap: 10px; justify-content: center; margin: 10px 0; }
+        .modes label { background: #e2e8f0; padding: 8px 15px; border-radius: 20px; cursor: pointer; user-select: none; }
+        .modes input[type="radio"] { margin-right: 5px; }
+
+        /* Khung hiển thị thông tin */
+        #info-box { background: #dcfce7; padding: 15px; border-radius: 4px; display: none; text-align: center; color: #166534; font-weight: bold; font-size: 1.1em; }
+        #status-msg { color: #ea580c; font-style: italic; text-align: center; margin: 10px 0; }
+
+        /* Bản đồ */
+        #map { width: 100%; height: 500px; border-radius: 8px; border: 2px solid #cbd5e1; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🗺️ Ứng dụng Chỉ đường Đơn giản</h2>
+
+    <!-- Bảng điều khiển -->
+    <div class="controls">
+        <div class="input-group">
+            <input type="text" id="origin-input" placeholder="Vị trí của bạn (Có thể gõ chữ hoặc lấy tự động)" />
+            <!-- Nút Lấy vị trí hiện tại -->
+            <button class="btn-location" id="btn-get-location" onclick="getMyLocation()">📍 Chỉ đường từ vị trí của tôi</button>
+        </div>
+        
+        <input type="text" id="dest-input" placeholder="Nhập điểm đến (VD: Hồ Gươm, Hà Nội)" />
+
+        <!-- Lựa chọn phương tiện -->
+        <div class="modes">
+            <label><input type="radio" name="mode" value="foot">🚶 Đi bộ</label>
+            <!-- OSRM gọi xe máy/ô tô chung là "driving" -->
+            <label><input type="radio" name="mode" value="driving" checked>🚗 Ô tô / Xe máy</label>
+            <label><input type="radio" name="mode" value="bike">🚴 Xe đạp</label>
+        </div>
+
+        <button class="btn-route" onclick="calculateRoute()">Tìm Đường Ngay</button>
+    </div>
+
+    <!-- Thông báo trạng thái và Kết quả -->
+    <p id="status-msg"></p>
+    <div id="info-box">
+        Khoảng cách: <span id="distance">0 km</span> | Thời gian: <span id="duration">0 phút</span>
+    </div>
+
+    <!-- Vùng chứa bản đồ -->
+    <div id="map"></div>
+</div>
+
+<!-- 2. Tải JavaScript của thư viện Bản đồ Leaflet -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v=1776819067181" crossorigin=""></script>
+
+<!-- MÃ LỆNH JAVASCRIPT GIAO TIẾP VỚI BẢN ĐỒ -->
+<script>
+    // ===================================================================
+    // PHẦN 1: KHỞI TẠO BẢN ĐỒ
+    // ===================================================================
+    
+    // Tạo bản đồ và đặt vị trí mặc định ở giữa Việt Nam (Vĩ độ 16.04, Kinh độ 108.20)
+    let map = L.map('map').setView([16.04, 108.20], 5);
+
+    // Dùng hình ảnh bản đồ từ OpenStreetMap (Miễn phí 100%)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Cấp phát các biến toàn cục để lưu Marker và Đường bộ
+    let routeLayer = null;
+    let originMarker = null;
+    let destMarker = null;
+    
+    // Biến lưu giữ tọa độ thực của người dùng (nếu có bấm 'Lấy vị trí')
+    let userCurrentLat = null;
+    let userCurrentLon = null;
+
+    // ===================================================================
+    // PHẦN 2: LẤY VỊ TRÍ HIỆN TẠI (GEOLOCATION API)
+    // ===================================================================
+    function getMyLocation() {
+        const statusMsg = document.getElementById('status-msg');
+        
+        // Kiểm tra trình duyệt có hỗ trợ GPS không
+        if (!navigator.geolocation) {
+            statusMsg.innerText = "Trình duyệt của bạn không hỗ trợ định vị.";
+            return;
+        }
+
+        statusMsg.innerText = "Đang tìm vị trí của bạn... (Hãy chọn Cho phép)";
+
+        // Gọi API yêu cầu tọa độ
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                userCurrentLat = position.coords.latitude;
+                userCurrentLon = position.coords.longitude;
+
+                // Điền chữ vào ô input để ng dùng biết đã lấy thành công
+                document.getElementById('origin-input').value = "📍 Vị trí hiện tại của tôi";
+                statusMsg.innerText = "Đã lấy được vị trí! Hãy nhập Điểm đến và Tìm đường.";
+            },
+            (error) => {
+                console.error("Lỗi Geolocation:", error);
+                let reason = "Chưa rõ nguyên nhân.";
+                if (error.code === 1) reason = "Bạn đã Chọn BLOCK (Từ chối định vị) trên trình duyệt.";
+                if (error.code === 2) reason = "Thiết bị không có tín hiệu GPS hoặc mạng ngắt kết nối.";
+                if (error.code === 3) reason = "Tính năng lấy vị trí bị quá hạn (Timeout).";
+                
+                // Trường hợp đặc biệt (Tuyệt đối quan trọng khi cấu hình cho sinh viên):
+                if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    reason += " Bắt buộc phải chạy dùng link http://localhost (hoặc HTTPS). Trình duyệt chặn GPS đối với IP ảo http://192.168.x.x!";
+                }
+
+                statusMsg.innerHTML = "<strong>❌ Lỗi lấy vị trí:</strong> " + reason;
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
+
+    // ===================================================================
+    // PHẦN 3: TÌM ĐƯỜNG VÀ VẼ LÊN BẢN ĐỒ
+    // ===================================================================
+    async function calculateRoute() {
+        const originInput = document.getElementById('origin-input').value.trim();
+        const destInput = document.getElementById('dest-input').value.trim();
+        const statusMsg = document.getElementById('status-msg');
+        const infoBox = document.getElementById('info-box');
+
+        if (!originInput || !destInput) {
+            statusMsg.innerText = "Vui lòng nhập đầy đủ gốc và đích!";
+            return;
+        }
+
+        statusMsg.innerText = "Đang phân tích địa chỉ...";
+        infoBox.style.display = 'none';
+
+        try {
+            // --- BƯỚC A: Đổi chữ viết (địa chỉ) thành Tọa độ Kinh/Vĩ (Geocoding) ---
+            let startCoords = {};
+            
+            // Nếu người dùng đang xài "Vị trí hiện tại", ta ưu tiên lấy tọa độ gốc đã lưu
+            if (originInput === "📍 Vị trí hiện tại của tôi" && userCurrentLat !== null) {
+                startCoords = { lat: userCurrentLat, lon: userCurrentLon };
+            } else {
+                // Nếu người dùng gõ chữ (Ví dụ: "Hà Nội"), gọi API chuyển đổi sang gốc
+                startCoords = await textToCoords(originInput);
+            }
+
+            // Gọi API đổi chữ thành Tọa độ Đích
+            const endCoords = await textToCoords(destInput);
+
+            if (!startCoords || !endCoords) {
+                statusMsg.innerText = "Không thể tìm thấy tọa độ địa danh này trên bản đồ.";
+                return;
+            }
+
+            // --- BƯỚC B: Lấy phương tiện di chuyển đang chọn ---
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            
+            statusMsg.innerText = "Đang tính toán tuyến đường tối ưu...";
+
+            // --- BƯỚC C: Gọi API Điều hướng (OSRM) để lấy mảng tọa độ vẽ đường ---
+            // Nguồn: router.project-osrm.org/v1/{phương_tiện}/{KinhĐộ1},{VĩĐộ1};{KinhĐộ2},{VĩĐộ2}
+            const url = `https://router.project-osrm.org/route/v1/${mode}/${startCoords.lon},${startCoords.lat};${endCoords.lon},${endCoords.lat}?overview=full&geometries=geojson`;
+            
+            const response = await fetch(url);
+            const data = await response.json();
+
+            if (data.code !== 'Ok' || data.routes.length === 0) {
+                statusMsg.innerText = "Không tìm thấy con đường bộ nào nối hai điểm này.";
+                return;
+            }
+
+            // --- BƯỚC D: Vẽ đường lên bản đồ (Leaflet Layer) ---
+            const routeConfig = data.routes[0];
+            
+            // 1. Dọn dẹp bản đổ cũ
+            if (routeLayer) map.removeLayer(routeLayer);
+            if (originMarker) map.removeLayer(originMarker);
+            if (destMarker) map.removeLayer(destMarker);
+
+            // 2. Gom mảng đường thẳng (Geojson) vẽ mực màu xanh
+            routeLayer = L.geoJSON(routeConfig.geometry, {
+                style: { color: '#ef4444', weight: 6, opacity: 0.8 }
+            }).addTo(map);
+
+            // 3. Đánh dấu Đinh ghim hai đầu
+            originMarker = L.marker([startCoords.lat, startCoords.lon]).addTo(map).bindPopup("Xuất Phát").openPopup();
+            destMarker = L.marker([endCoords.lat, endCoords.lon]).addTo(map).bindPopup("Điểm Đến");
+
+            // 4. Kéo màn hình bao phủ lấy toàn bộ đường đi
+            map.fitBounds(routeLayer.getBounds(), { padding: [50, 50] });
+
+            // --- BƯỚC E: Hiện thông số Quãng đường, Thời gian ---
+            document.getElementById('distance').innerText = (routeConfig.distance / 1000).toFixed(1) + ' km';
+            document.getElementById('duration').innerText = Math.round(routeConfig.duration / 60) + ' phút';
+            infoBox.style.display = 'block';
+            statusMsg.innerText = ""; // Xóa lỗi hiện tại
+
+        } catch (error) {
+            console.error(error);
+            statusMsg.innerText = "Đã xảy ra lỗi hệ thống khi tính toán.";
+        }
+    }
+
+    // ===================================================================
+    // HÀM BỔ TRỢ: Chuyển Địa chỉ Chữ -> Tọa độ (Dùng API Nominatim của OSM)
+    // ===================================================================
+    async function textToCoords(address) {
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Vietnam')}&limit=1`;
+        const res = await fetch(url);
+        const data = await res.json();
+        
+        if (data && data.length > 0) {
+            return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+        }
+        return null; // Không tìm ra
+    }
+</script>
+</body>
+</html>

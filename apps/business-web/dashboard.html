@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WanderViệt Partner — Business Ecosystem</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="business-design.css?v=2.0" />
+  <style>
+    .initial-loader { position: fixed; inset: 0; display:flex; align-items:center; justify-content:center; gap:1rem; flex-direction:column; background:#040914; color:#94A3B8; }
+    .spinner { width:40px; height:40px; border:3px solid rgba(255,255,255,0.07); border-top-color:#00F0FF; border-radius:50%; animation:spin 1s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @keyframes authSlideIn { from { opacity:0; transform:translateY(24px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+    /* Input focus glow */
+    input:focus { outline:none; border-color:#00F0FF !important; box-shadow:0 0 0 3px rgba(0,240,255,0.1) !important; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="initial-loader">
+      <div class="spinner"></div>
+      <span>Đang khởi tạo hệ sinh thái...</span>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    // SAFETY NET: Force hide initial loader after 5 seconds if React fails to mount
+    setTimeout(() => {
+      const loader = document.querySelector('.initial-loader');
+      if (loader && loader.parentElement) {
+        console.warn('React mounting seems delayed. Forcing loader removal...');
+        // Only remove if it's still there (React might have already replaced #root)
+        if (document.body.contains(loader)) {
+          loader.style.opacity = '0';
+          loader.style.transition = 'opacity 0.5s ease';
+          setTimeout(() => loader.remove(), 500);
+        }
+      }
+    }, 5000);
+  </script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    /* ============================================================
+       MOCK AUTH SERVICE
+       Thay đổi mockLogin() bằng fetch() thật khi có backend.
+    ============================================================ */
+    const AUTH_TOKEN_KEY = 'biz_auth_token';
+    const AUTH_USER_KEY  = 'biz_auth_user';
+    const REG_DB_KEY     = 'biz_registered_users';
+
+    function getRegisteredDb() {
+      try {
+        var raw = localStorage.getItem(REG_DB_KEY);
+        return raw ? JSON.parse(raw) : [];
+      } catch(e) { return []; }
+    }
+    function saveRegisteredDb(db) {
+      try { localStorage.setItem(REG_DB_KEY, JSON.stringify(db)); } catch(e) {}
+    }
+
+    const mockAuthService = {
+      login(email, password, rememberMe) {
+        return fetch('/api/auth/business/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email, password: password })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            var store = rememberMe ? localStorage : sessionStorage;
+            store.setItem(AUTH_TOKEN_KEY, data.token);
+            store.setItem('wander_business_token', data.token); // Đồng bộ key
+            store.setItem(AUTH_USER_KEY, JSON.stringify(data.user));
+          }
+          return data;
+        })
+        .catch(err => {
+          return { success: false, message: 'Lỗi kết nối máy chủ.' };
+        });
+      },
+      register(name, email, password) {
+        return fetch('/api/auth/business/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name, email: email, password: password })
+        })
+        .then(res => res.json())
+        .then(data => {
+          return data;
+        })
+        .catch(err => {
+          return { success: false, message: 'Lỗi kết nối máy chủ.' };
+        });
+      },
+      getSession() {
+        try {
+          const token = localStorage.getItem(AUTH_TOKEN_KEY) || sessionStorage.getItem(AUTH_TOKEN_KEY);
+          const raw   = localStorage.getItem(AUTH_USER_KEY)  || sessionStorage.getItem(AUTH_USER_KEY);
+          if (token && raw) return { token, user: JSON.parse(raw) };
+        } catch(e) {}
+        return null;
+      },
+      logout() {
+        [localStorage, sessionStorage].forEach(s => {
+          s.removeItem(AUTH_TOKEN_KEY);
+          s.removeItem(AUTH_USER_KEY);
+        });
+      },
+      forgotPassword(email) {
+        // Mock: chấp nhận mọi email hợp lệ, trả OTP 6 số
+        return new Promise(resolve => setTimeout(() => {
+          const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRx.test(email)) {
+            resolve({ success: false, message: 'Email không hợp lệ.' });
+          } else {
+            const otp = String(Math.floor(100000 + Math.random() * 900000));
+            // Lưu tạm vào sessionStorage để bước sau verify
+            sessionStorage.setItem('biz_reset_email', email);
+            sessionStorage.setItem('biz_reset_otp', otp);
+            console.info('[DEV] OTP:', otp); // Chỉ hiện trong dev console
+            resolve({ success: true, otp }); // Trả về để hiện demo
+          }
+        }, 1000));
+      },
+      verifyOtp(inputOtp) {
+        return new Promise(resolve => setTimeout(() => {
+          const saved = sessionStorage.getItem('biz_reset_otp');
+          if (inputOtp === saved) resolve({ success: true });
+          else resolve({ success: false, message: 'Mã OTP không đúng hoặc đã hết hạn.' });
+        }, 600));
+      },
+      resetPassword(newPassword) {
+        return new Promise(resolve => setTimeout(() => {
+          sessionStorage.removeItem('biz_reset_otp');
+          sessionStorage.removeItem('biz_reset_email');
+          resolve({ success: true });
+        }, 800));
+      }
+    };
+
+    /* ============================================================
+       AUTH SCREEN COMPONENT
+    ============================================================ */
+    function AuthScreen({ onLoginSuccess }) {
+      // mode: 'login' | 'register' | 'forgot' | 'otp' | 'reset' | 'done'
+      const [mode, setMode]           = useState('login');
+      const [email, setEmail]         = useState('');
+      const [password, setPassword]   = useState('');
+      const [bizName, setBizName]     = useState('');
+      const [rememberMe, setRemember] = useState(false);
+      const [showPass, setShowPass]   = useState(false);
+      const [showNewPass, setShowNewPass] = useState(false);
+      const [error, setError]         = useState('');
+      const [info, setInfo]           = useState('');
+      const [loading, setLoading]     = useState(false);
+      const [fieldErr, setFieldErr]   = useState({});
+      // forgot-password state
+      const [fpEmail, setFpEmail]     = useState('');
+      const [fpOtp, setFpOtp]         = useState('');
+      const [fpOtpHint, setFpOtpHint] = useState(''); // dev hint
+      const [fpNewPw, setFpNewPw]     = useState('');
+      const [fpConfirm, setFpConfirm] = useState('');
+
+      const switchMode = () => { setMode(m => m === 'login' ? 'register' : 'login'); setError(''); setFieldErr({}); };
+
+      const validate = () => {
+        const errs = {};
+        const emailRx = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email)                  errs.email    = 'Vui lòng nhập email.';
+        else if (!emailRx.test(email)) errs.email  = 'Email không đúng định dạng.';
+        if (!password)               errs.password = 'Vui lòng nhập mật khẩu.';
+        else if (password.length < 6) errs.password = 'Mật khẩu phải có ít nhất 6 ký tự.';
+        if (mode === 'register' && !bizName) errs.bizName = 'Vui lòng nhập tên doanh nghiệp.';
+        return errs;
+      };
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+        const errs = validate();
+        if (Object.keys(errs).length) { setFieldErr(errs); return; }
+        setFieldErr({});
+        setLoading(true);
+        try {
+          if (mode === 'login') {
+            const res = await mockAuthService.login(email, password, rememberMe);
+            if (res.success) {
+              onLoginSuccess(res.user);
+            } else {
+              setError(res.message || 'Đăng nhập thất bại. Vui lòng thử lại.');
+            }
+          } else if (mode === 'register') {
+            const res = await mockAuthService.register(bizName, email, password);
+            if (res.success) {
+              setMode('login');
+              setInfo('Đăng ký thành công! Vui lòng đăng nhập bằng tài khoản vừa tạo.');
+              setPassword(''); // Xóa mật khẩu cho an toàn
+            } else {
+              setError(res.message || 'Đăng ký thất bại. Vui lòng thử lại.');
+            }
+          }
+        } catch(err) {
+          setError('Không thể kết nối đến máy chủ. Kiểm tra lại mạng.');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      const inp = (hasErr) => ({
+        width:'100%', boxSizing:'border-box',
+        background: hasErr ? 'rgba(255,0,85,0.07)' : 'rgba(255,255,255,0.05)',
+        border: `1.5px solid ${hasErr ? '#f43f5e' : 'rgba(255,255,255,0.1)'}`,
+        borderRadius:'12px', padding:'0.85rem 1rem', color:'white',
+        fontFamily:'var(--biz-font)', fontSize:'0.95rem',
+        transition:'border-color 0.2s', outline:'none'
+      });
+
+      // ── Forgot password handlers ──────────────────────────
+      const handleFpSendOtp = async (e) => {
+        e.preventDefault();
+        setError(''); setInfo('');
+        if (!fpEmail) { setError('Vui lòng nhập email.'); return; }
+        setLoading(true);
+        try {
+          const res = await mockAuthService.forgotPassword(fpEmail);
+          if (res.success) {
+            setFpOtpHint(res.otp); // hint chỉ hiện trong UI demo
+            setMode('otp');
+            setInfo('Đã gửi mã OTP! Kiểm tra email của bạn.');
+          } else { setError(res.message); }
+        } catch { setError('Lỗi kết nối. Thử lại.'); }
+        finally { setLoading(false); }
+      };
+
+      const handleFpVerifyOtp = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!fpOtp || fpOtp.length !== 6) { setError('OTP gồm 6 chữ số.'); return; }
+        setLoading(true);
+        try {
+          const res = await mockAuthService.verifyOtp(fpOtp);
+          if (res.success) { setMode('reset'); setInfo(''); }
+          else { setError(res.message); }
+        } catch { setError('Lỗi xác thực. Thử lại.'); }
+        finally { setLoading(false); }
+      };
+
+      const handleFpReset = async (e) => {
+        e.preventDefault();
+        setError('');
+        if (!fpNewPw || fpNewPw.length < 6) { setError('Mật khẩu mới phải có ít nhất 6 ký tự.'); return; }
+        if (fpNewPw !== fpConfirm) { setError('Xác nhận mật khẩu không khớp.'); return; }
+        setLoading(true);
+        try {
+          const res = await mockAuthService.resetPassword(fpNewPw);
+          if (res.success) { setMode('done'); }
+          else { setError(res.message || 'Có lỗi xảy ra.'); }
+        } catch { setError('Lỗi kết nối. Thử lại.'); }
+        finally { setLoading(false); }
+      };
+
+      const goBackToLogin = () => { setMode('login'); setError(''); setInfo(''); setFpEmail(''); setFpOtp(''); setFpOtpHint(''); setFpNewPw(''); setFpConfirm(''); };
+
+      return (
+        <div style={{
+          minHeight:'100vh', display:'flex', alignItems:'center',
+          justifyContent:'center', background:'#040914',
+          fontFamily:'var(--biz-font)', padding:'1rem',
+          backgroundImage:'radial-gradient(ellipse at 20% 50%, rgba(0,85,255,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(0,240,255,0.06) 0%, transparent 50%)'
+        }}>
+          <div style={{
+            width:'100%', maxWidth:'440px',
+            background:'rgba(11,20,38,0.95)',
+            border:'1px solid rgba(255,255,255,0.1)',
+            borderRadius:'28px', padding:'2.5rem 2.5rem',
+            boxShadow:'0 30px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,240,255,0.05)',
+            animation:'authSlideIn 0.4s cubic-bezier(0.4,0,0.2,1)'
+          }}>
+            {/* Logo */}
+            <div style={{ textAlign:'center', marginBottom:'2rem' }}>
+              <div style={{ display:'inline-flex', alignItems:'center', gap:'0.6rem', fontSize:'1.5rem', fontWeight:800, color:'white', marginBottom:'0.75rem' }}>
+                <span style={{ background:'linear-gradient(135deg,#0055FF,#00F0FF)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>◈</span>
+                WanderViệt
+                <span style={{ fontSize:'0.7rem', fontWeight:700, background:'linear-gradient(135deg,#0055FF,#00F0FF)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', border:'1px solid rgba(0,240,255,0.3)', borderRadius:'6px', padding:'0.15rem 0.5rem', marginLeft:'0.2rem' }}>Business</span>
+              </div>
+              <p style={{ color:'#64748b', fontSize:'0.9rem', margin:0, lineHeight:1.5 }}>
+                {mode === 'login'    ? 'Đăng nhập để quản lý và phát triển doanh nghiệp du lịch.'
+                : mode === 'register'? 'Tạo tài khoản doanh nghiệp để bắt đầu hành trình.'
+                : mode === 'forgot'  ? 'Đặt lại mật khẩu — nhập email đăng ký của bạn.'
+                : mode === 'otp'     ? 'Kiểm tra email và nhập mã OTP 6 chữ số.'
+                : mode === 'reset'   ? 'Tạo mật khẩu mới cho tài khoản của bạn.'
+                : 'Đặt lại mật khẩu thành công!'}
+              </p>
+            </div>
+
+            {/* Mode Toggle Removed: Use footer button instead */}
+
+            {/* Error Banner */}
+            {error && (
+              <div style={{
+                background:'rgba(244,63,94,0.1)', border:'1px solid rgba(244,63,94,0.25)',
+                borderRadius:'10px', padding:'0.8rem 1rem', marginBottom:'1.2rem',
+                color:'#f87171', fontSize:'0.88rem', display:'flex', alignItems:'center', gap:'0.5rem'
+              }}>
+                <span>⚠️</span> {error}
+              </div>
+            )}
+            {/* Info Banner */}
+            {info && !error && (
+              <div style={{
+                background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.25)',
+                borderRadius:'10px', padding:'0.8rem 1rem', marginBottom:'1.2rem',
+                color:'#6ee7b7', fontSize:'0.88rem', display:'flex', alignItems:'center', gap:'0.5rem'
+              }}>
+                <span>✉️</span> {info}
+              </div>
+            )}
+
+            {/* ══ FORM LOGIN / REGISTER ══ */}
+            {(mode === 'login' || mode === 'register') && (
+            <form onSubmit={handleSubmit} noValidate>
+              <div style={{ display:'flex', flexDirection:'column', gap:'1.1rem' }}>
+
+                {/* Biz Name — Register only */}
+                {mode === 'register' && (
+                  <div>
+                    <label style={{ display:'block', fontSize:'0.85rem', fontWeight:600, color:'#94a3b8', marginBottom:'0.4rem' }}>Tên doanh nghiệp</label>
+                    <input value={bizName} onChange={e => { setBizName(e.target.value); setFieldErr(p => ({...p, bizName:''})); }}
+                      style={inp(fieldErr.bizName)} placeholder="VD: Khách sạn Mường Thanh" />
+                    {fieldErr.bizName && <span style={{ color:'#f87171', fontSize:'0.78rem' }}>{fieldErr.bizName}</span>}
+                  </div>
+                )}
+
+                {/* Email */}
+                <div>
+                  <label style={{ display:'block', fontSize:'0.85rem', fontWeight:600, color:'#94a3b8', marginBottom:'0.4rem' }}>Email</label>
+                  <input type="email" value={email} onChange={e => { setEmail(e.target.value); setFieldErr(p => ({...p, email:''})); }}
+                    style={inp(fieldErr.email)} placeholder="admin@company.com" autoComplete="email" />
+                  {fieldErr.email && <span style={{ color:'#f87171', fontSize:'0.78rem' }}>{fieldErr.email}</span>}
+                </div>
+
+                {/* Password */}
+                <div>
+                  <label style={{ display:'block', fontSize:'0.85rem', fontWeight:600, color:'#94a3b8', marginBottom:'0.4rem' }}>Mật khẩu</label>
+                  <div style={{ position:'relative' }}>
+                    <input type={showPass ? 'text' : 'password'} value={password}
+                      onChange={e => { setPassword(e.target.value); setFieldErr(p => ({...p, password:''})); }}
+                      style={{ ...inp(fieldErr.password), paddingRight:'3rem' }}
+                      placeholder="Ít nhất 6 ký tự" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} />
+                    <button type="button" onClick={() => setShowPass(p => !p)} style={{
+                      position:'absolute', right:'0.75rem', top:'50%', transform:'translateY(-50%)',
+                      background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:'1.1rem'
+                    }}>{showPass ? '🙈' : '👁️'}</button>
+                  </div>
+                  {fieldErr.password && <span style={{ color:'#f87171', fontSize:'0.78rem' }}>{fieldErr.password}</span>}
+                </div>
+
+                {/* Remember Me + Forgot (Login only) */}
+                {mode === 'login' && (
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <label style={{ display:'flex', alignItems:'center', gap:'0.5rem', cursor:'pointer', fontSize:'0.87rem', color:'#94a3b8' }}>
+                      <input type="checkbox" checked={rememberMe} onChange={e => setRemember(e.target.checked)}
+                        style={{ width:'16px', height:'16px', accentColor:'#00F0FF', cursor:'pointer' }} />
+                      Ghi nhớ đăng nhập
+                    </label>
+                    <button type="button" onClick={() => { setMode('forgot'); setError(''); setInfo(''); setFpEmail(email); }}
+                      style={{ background:'none', border:'none', color:'#00F0FF', fontSize:'0.85rem', cursor:'pointer', fontWeight:600 }}>
+                      Quên mật khẩu?
+                    </button>
+                  </div>
+                )}
+
+                {/* Submit Button */}
+                <button type="submit" disabled={loading} style={{
+                  width:'100%', padding:'0.95rem', borderRadius:'14px', border:'none',
+                  background: loading ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg,#0055FF,#00F0FF)',
+                  color: loading ? '#64748b' : 'white', fontWeight:700, fontSize:'1rem',
+                  fontFamily:'var(--biz-font)', cursor: loading ? 'not-allowed' : 'pointer',
+                  transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.6rem',
+                  boxShadow: loading ? 'none' : '0 8px 24px rgba(0,85,255,0.35)'
+                }}>
+                  {loading ? (
+                    <><span style={{ display:'inline-block', width:'18px', height:'18px', border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+                    {mode === 'login' ? 'Đang xác thực...' : 'Đang tạo tài khoản...'}</>
+                  ) : (
+                    mode === 'login' ? '🔑  Đăng nhập' : '🚀  Tạo tài khoản'
+                  )}
+                </button>
+
+                {/* Demo hint */}
+                {mode === 'login' && (
+                  <div style={{ textAlign:'center', fontSize:'0.8rem', color:'#475569', padding:'0.6rem', background:'rgba(255,255,255,0.03)', borderRadius:'10px', border:'1px solid rgba(255,255,255,0.05)' }}>
+                    Demo: <code style={{ color:'#00F0FF' }}>admin@company.com</code> / <code style={{ color:'#00F0FF' }}>123456</code>
+                  </div>
+                )}
+              </div>
+            </form>
+            )}
+
+            {/* ══ MÀN HÌNH 1: NHẬP EMAIL (forgot) ══ */}
+            {mode === 'forgot' && (
+              <form onSubmit={handleFpSendOtp} noValidate>
+                <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+                  <div>
+                    <label style={{ display:'block', fontSize:'0.85rem', fontWeight:600, color:'#94a3b8', marginBottom:'0.4rem' }}>Email đã đăng ký</label>
+                    <input type="email" value={fpEmail} onChange={e => setFpEmail(e.target.value)}
+                      style={inp(false)} placeholder="admin@company.com" autoComplete="email" autoFocus />
+                  </div>
+                  <button type="submit" disabled={loading} style={{
+                    padding:'0.9rem', borderRadius:'12px', border:'none', fontWeight:700, fontSize:'0.95rem',
+                    fontFamily:'var(--biz-font)', cursor: loading ? 'not-allowed':'pointer',
+                    background: loading ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#0055FF,#00F0FF)',
+                    color: loading ? '#64748b':'white', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem'
+                  }}>
+                    {loading ? <><span style={{ display:'inline-block', width:'16px', height:'16px', border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} /> Đang gửi...</> : '📨  Gửi mã OTP'}
+                  </button>
+                  <button type="button" onClick={goBackToLogin} style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:'0.88rem', textAlign:'center' }}>
+                    ← Quay lại đăng nhập
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* ══ MÀN HÌNH 2: NHẬP OTP (otp) ══ */}
+            {mode === 'otp' && (
+              <form onSubmit={handleFpVerifyOtp} noValidate>
+                <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+                  {fpOtpHint && (
+                    <div style={{ textAlign:'center', fontSize:'0.8rem', color:'#475569', padding:'0.6rem 0.8rem', background:'rgba(255,255,255,0.03)', borderRadius:'10px', border:'1px solid rgba(255,255,255,0.05)' }}>
+                      🧪 Dev hint — OTP: <code style={{ color:'#00F0FF', fontSize:'1rem', fontWeight:700, letterSpacing:'0.1em' }}>{fpOtpHint}</code>
+                    </div>
+                  )}
+                  <div>
+                    <label style={{ display:'block', fontSize:'0.85rem', fontWeight:600, color:'#94a3b8', marginBottom:'0.4rem' }}>Mã OTP (6 chữ số)</label>
+                    <input type="text" inputMode="numeric" maxLength={6} value={fpOtp}
+                      onChange={e => setFpOtp(e.target.value.replace(/\D/g,'').slice(0,6))}
+                      style={{ ...inp(false), fontSize:'1.6rem', letterSpacing:'0.4em', textAlign:'center', fontWeight:700 }}
+                      placeholder="______" autoFocus />
+                  </div>
+                  <button type="submit" disabled={loading} style={{
+                    padding:'0.9rem', borderRadius:'12px', border:'none', fontWeight:700, fontSize:'0.95rem',
+                    fontFamily:'var(--biz-font)', cursor: loading ? 'not-allowed':'pointer',
+                    background: loading ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#0055FF,#00F0FF)',
+                    color: loading ? '#64748b':'white', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem'
+                  }}>
+                    {loading ? <><span style={{ display:'inline-block', width:'16px', height:'16px', border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} /> Đang xác thực...</> : '✅  Xác nhận OTP'}
+                  </button>
+                  <div style={{ display:'flex', justifyContent:'space-between', fontSize:'0.83rem' }}>
+                    <button type="button" onClick={() => { setMode('forgot'); setError(''); setInfo(''); }} style={{ background:'none', border:'none', color:'#64748b', cursor:'pointer' }}>
+                      ← Nhập lại email
+                    </button>
+                    <button type="button" onClick={handleFpSendOtp} disabled={loading} style={{ background:'none', border:'none', color:'#00F0FF', cursor:'pointer', fontWeight:600 }}>
+                      Gửi lại OTP
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
+
+            {/* ══ MÀN HÌNH 3: ĐẶT MẬT KHẨU MỚI (reset) ══ */}
+            {mode === 'reset' && (
+              <form onSubmit={handleFpReset} noValidate>
+                <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+                  <div>
+                    <label style={{ display:'block', fontSize:'0.85rem', fontWeight:600, color:'#94a3b8', marginBottom:'0.4rem' }}>Mật khẩu mới</label>
+                    <div style={{ position:'relative' }}>
+                      <input type={showNewPass ? 'text':'password'} value={fpNewPw}
+                        onChange={e => setFpNewPw(e.target.value)}
+                        style={{ ...inp(false), paddingRight:'3rem' }} placeholder="Ít nhất 6 ký tự" autoFocus />
+                      <button type="button" onClick={() => setShowNewPass(p => !p)} style={{ position:'absolute', right:'0.75rem', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', color:'#64748b', cursor:'pointer', fontSize:'1.1rem' }}>{showNewPass ? '🙈':'👁️'}</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display:'block', fontSize:'0.85rem', fontWeight:600, color:'#94a3b8', marginBottom:'0.4rem' }}>Xác nhận mật khẩu mới</label>
+                    <input type="password" value={fpConfirm}
+                      onChange={e => setFpConfirm(e.target.value)}
+                      style={inp(fpConfirm && fpConfirm !== fpNewPw)} placeholder="Nhập lại mật khẩu" />
+                    {fpConfirm && fpConfirm !== fpNewPw && <span style={{ color:'#f87171', fontSize:'0.78rem' }}>Mật khẩu không khớp.</span>}
+                  </div>
+                  <button type="submit" disabled={loading} style={{
+                    padding:'0.9rem', borderRadius:'12px', border:'none', fontWeight:700, fontSize:'0.95rem',
+                    fontFamily:'var(--biz-font)', cursor: loading ? 'not-allowed':'pointer',
+                    background: loading ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#0055FF,#00F0FF)',
+                    color: loading ? '#64748b':'white', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem'
+                  }}>
+                    {loading ? <><span style={{ display:'inline-block', width:'16px', height:'16px', border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'white', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} /> Đang lưu...</> : '🔐  Đặt lại mật khẩu'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* ══ MÀN HÌNH 4: THÀNH CÔNG (done) ══ */}
+            {mode === 'done' && (
+              <div style={{ textAlign:'center', padding:'1rem 0' }}>
+                <div style={{ fontSize:'3.5rem', marginBottom:'1rem' }}>🎉</div>
+                <h3 style={{ color:'#4ade80', fontSize:'1.3rem', fontWeight:800, margin:'0 0 0.5rem' }}>Đặt lại thành công!</h3>
+                <p style={{ color:'#64748b', fontSize:'0.9rem', lineHeight:1.6, marginBottom:'1.5rem' }}>
+                  Mật khẩu của bạn đã được cập nhật.<br/>Bạn có thể đăng nhập ngay bây giờ.
+                </p>
+                <button onClick={goBackToLogin} style={{
+                  padding:'0.85rem 2rem', borderRadius:'12px', border:'none', fontWeight:700,
+                  background:'linear-gradient(135deg,#0055FF,#00F0FF)', color:'white',
+                  fontFamily:'var(--biz-font)', cursor:'pointer', fontSize:'0.95rem',
+                  boxShadow:'0 8px 24px rgba(0,85,255,0.35)'
+                }}>
+                  🔑 Đăng nhập ngay
+                </button>
+              </div>
+            )}
+
+            {/* ── Footer ── */}
+            {(mode === 'login' || mode === 'register') && (
+            <div style={{ marginTop:'2rem', paddingTop:'1.5rem', borderTop:'1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'0.6rem' }}>
+                <button type="button" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(''); setFieldErr({}); }} style={{
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  gap:'0.5rem', padding:'0.8rem', cursor:'pointer', width: '100%',
+                  background:'rgba(0,240,255,0.04)', border:'1px solid rgba(0,240,255,0.12)',
+                  borderRadius:'10px', transition:'all 0.2s',
+                  color:'#67e8f9', fontSize:'0.85rem', fontWeight:600, fontFamily:'var(--biz-font)'
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(0,240,255,0.1)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(0,240,255,0.04)'; }}>
+                  <span>📋</span> {mode === 'login' ? 'Đăng ký tài khoản doanh nghiệp đầy đủ' : 'Đã có tài khoản? Quay lại Đăng nhập'}
+                </button>
+              </div>
+            </div>
+            )}
+
+          </div>
+        </div>
+      );
+    }
+
+    const STORAGE_KEY = 'biz_ecosystem_v4'; // Forced update for high-quality narrative content
+    const EMPTY_FORM = {
+      kind: 'diem-du-lich', name: '', category: '', region: '', address: '', description: '',
+      overview: '', highlights: '', experience: '', themeColor: '#3b82f6',
+      image: '', priceFrom: '', priceTo: '', rating: '4.5', clicks: '0', favorites: '0', timeSpent: '0',
+      openTime: '', closeTime: '', amenities: [],
+      amusementPlaces: '', accommodations: '', diningPlaces: '', checkInSpots: ''
+    };
+    const AMENITY_OPTIONS = [
+      { value: 'wifi', label: 'Wi-Fi' }, { value: 'parking', label: 'Bãi đỗ xe' },
+      { value: 'guide', label: 'Hướng dẫn viên' }, { value: 'ticket', label: 'Đặt vé online' },
+      { value: 'restaurant', label: 'Ẩm thực tại chỗ' }, { value: 'support', label: 'Hỗ trợ 24/7' }
+    ];
+    const DEMO_ITEMS = [
+      // Sunrise Travel Group (seed-1)
+      { 
+        id:'1', businessId:'seed-1', kind:'diem-du-lich', name:'Phố cổ Hội An', category:'Di sản văn hóa', region:'Hội An', 
+        description:'Thương cảng cổ rực rỡ dưới ánh đèn lồng.', 
+        overview: 'Hội An không chỉ là một địa điểm, đó là một chuyến du hành ngược thời gian về thế kỷ 17. Giữa những bức tường vàng rêu phong và những con hẻm nhỏ hẹp, bạn sẽ cảm nhận được hơi thở của một thương cảng sầm uất nhất Đông Nam Á một thời. Nơi đây, sự giao thoa giữa văn hóa Việt, Nhật và Trung Hoa hiện hữu trong từng mái ngói âm dương, từng nếp nhà gỗ chạm khắc tinh xảo.',
+        highlights: ['Lễ hội đêm rằm lung linh', 'Chùa Cầu biểu tượng lịch sử', 'Ẩm thực đường phố trứ danh'],
+        experience: 'Hãy dành một buổi tối tản bộ trên cầu An Hội, nơi hàng trăm chiếc đèn hoa đăng trôi lững lờ trên dòng sông Hoài thơ mộng. Đừng quên ghé thăm một tiệm may thủ công để sở hữu bộ trang phục truyền thống chỉ trong 24 giờ - một trải nghiệm "đặc sản" chỉ có tại Hội An.',
+        openingHours: 'Đẹp nhất từ 17:30 – 21:00',
+        themeColor: '#facc15',
+        image:'https://images.unsplash.com/photo-1528127269322-539801943592?w=900', priceFrom:'120000', priceTo:'600000', rating:'4.8', clicks:2800, favorites:4100, timeSpent:16700, views:18200, status:'approved', amenities:['guide','ticket'] 
+      },
+      { 
+        id:'3', businessId:'seed-1', kind:'diem-du-lich', name:'Bà Nà Hills', category:'Công viên giải trí', region:'Đà Nẵng', 
+        description:'Lạc lối giữa làng Pháp cổ điển trên đỉnh núi Chúa.', 
+        overview: 'Tạm rời xa cái nóng gay gắt của miền Trung để bước vào một thế giới mang phong vị châu Âu giữa lòng Đà Nẵng. Bà Nà Hills như một giấc mơ lãng mạn ngự trị trên đỉnh núi Chúa, nơi bạn có thể trải nghiệm cả bốn mùa trong một ngày duy nhất. Từ những lâu đài phong cách Gothic đến những vườn hoa rực rỡ, mỗi góc nhỏ tại đây đều là một tác phẩm nghệ thuật.',
+        highlights: ['Cầu Vàng - Bàn tay khổng lồ', 'Hệ thống cáp treo xuyên mây', 'Hầm rượu Debay cổ kính'],
+        experience: 'Cảm giác đi dạo trên Cầu Vàng lúc sương mù giăng kín, bạn sẽ thấy mình như đang dạo bước trên mây thực thụ. Sau đó, hãy thưởng thức một ly vang hảo hạng tại hầm rượu hơn 100 năm tuổi và đắm chìm trong giai điệu sôi động của các show diễn Carnival đường phố.',
+        openingHours: '07:30 – 21:30 (Tránh đi vào cuối tuần)',
+        themeColor: '#ef4444',
+        image:'https://images.unsplash.com/photo-1710900906700-6723be0fbd80?w=900', priceFrom:'850000', priceTo:'1450000', rating:'4.9', clicks:5200, favorites:6800, timeSpent:23500, views:32000, status:'approved', amenities:['ticket','guide','restaurant'] 
+      },
+      // Viet Discovery Co. (seed-2)
+      { 
+        id:'4', businessId:'seed-2', kind:'diem-du-lich', name:'Vịnh Hạ Long', category:'Kỳ quan thiên nhiên', region:'Quảng Ninh', 
+        description:'Kỳ quan đá vôi huyền ảo giữa biển khơi ngọc bích.', 
+        overview: 'Hãy tưởng tượng bạn đang thức dậy trên một chiếc du thuyền sang trọng, xung quanh là hàng ngàn hòn đảo đá vôi kỳ vĩ nhô lên từ làn nước xanh ngọc bích tĩnh lặng. Vịnh Hạ Long không chỉ là di sản thế giới, mà là một bản giao hưởng giữa đá và nước, một kiệt tác thiên nhiên khiến bất kỳ ai cũng phải ngỡ ngàng trước vẻ đẹp hoang sơ và huyền bí của nó.',
+        highlights: ['Du thuyền ngủ đêm 5 sao', 'Khám phá Hang Sửng Sốt', 'Chèo Kayak xuyên qua hang luồn'],
+        experience: 'Đón bình minh bằng bài tập Thái Cực Quyền trên boong tàu là cách tuyệt vời nhất để nạp năng lượng. Tiếp đó, hãy thử cảm giác chèo kayak len lỏi vào những hang động nhỏ hẹp để tìm thấy những bãi tắm bí mật mà tàu lớn không thể tiếp cận.',
+        openingHours: '07:30 – 16:30 (Các tour du thuyền)',
+        themeColor: '#10b981',
+        image:'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=900', priceFrom:'950000', priceTo:'3200000', rating:'4.8', clicks:4100, favorites:5200, timeSpent:16400, views:21000, status:'approved', amenities:['guide','ticket','restaurant'] 
+      },
+      // Eco-Way Vietnam (seed-5)
+      { 
+        id:'13', businessId:'seed-5', kind:'diem-du-lich', name:'Fansipan Legend', category:'Chinh phục đỉnh cao', region:'Lào Cai', 
+        description:'Chạm tay vào "Nóc nhà Đông Dương" cao 3.143m.', 
+        overview: 'Đây là cuộc hành trình dành cho những trái tim khao khát chinh phục. Vượt qua những tầng mây cuồn cuộn trên hệ thống cáp treo hiện đại, bạn sẽ được đứng trên đỉnh núi cao nhất Việt Nam - Fansipan. Đứng tại đây, cả dãy Hoàng Liên Sơn hùng vĩ thu vào tầm mắt, cảm giác chiến thắng chính mình giữa không gian bao la, lộng gió là một ký ức không thể nào quên.',
+        highlights: ['Chụp ảnh cùng cột mốc 3.143m', 'Bích Vân Thiền Tự trên mây', 'Ngắm hoa đỗ quyên rừng'],
+        experience: 'Đừng chỉ đi cáp treo, hãy thử thách bản thân với vài trăm bậc thang cuối cùng để lên đỉnh, cảm nhận nhịp thở gấp gáp trong không khí loãng và cái lạnh se sắt của vùng cao. Nếu đi vào mùa đông, bạn có thể may mắn được ngắm nhìn tuyết rơi phủ trắng xóa cả quần thể tâm linh.',
+        openingHours: '08:00 – 17:00 (Nên đi sáng sớm săn mây)',
+        themeColor: '#6366f1',
+        image:'https://images.unsplash.com/photo-1641799767634-3f0f7036cf59?w=900', priceFrom:'780000', priceTo:'1250000', rating:'4.7', clicks:2420, favorites:3530, timeSpent:11820, views:16750, status:'approved', amenities:['ticket','parking','guide'] 
+      },
+      // Saigon Nights Ent. (seed-8)
+      { 
+        id:'22', businessId:'seed-8', kind:'diem-du-lich', name:'Thác Dray Nur', category:'Thiên nhiên hoang sơ', region:'Đắk Lắk', 
+        description:'Dòng thác huyền thoại giữa đại ngàn Tây Nguyên.', 
+        overview: 'Ẩn mình sau những tán rừng già, Thác Dray Nur hiện ra như một bức tường nước trắng xóa khổng lồ đổ xuống hồ nước xanh ngắt. Âm thanh vang vọng của dòng thác như lời kể về những truyền thuyết tình yêu mãnh liệt của người đồng bào Ê Đê. Đây là nơi bạn tìm về với sự tĩnh lặng tuyệt đối, chỉ có tiếng gió, tiếng nước và hơi thở của đại ngàn xanh thẳm.',
+        highlights: ['Check-in cầu treo mạo hiểm', 'Thám hiểm hang động sau thác', 'Thưởng thức cafe Tây Nguyên'],
+        experience: 'Trải nghiệm chèo thuyền vượt thác (rafting) là hoạt động không dành cho những người yếu tim nhưng lại cực kỳ sảng khoái. Sau khi mệt nhoài, hãy ngồi nghỉ trên những tảng đá lớn, nhâm nhi một ly cafe Ban Mê đậm đặc và cảm nhận hơi nước mát lạnh lan tỏa khắp không gian.',
+        openingHours: '06:00 – 18:00 (Mùa nước đổ cực đẹp)',
+        themeColor: '#0ea5e9',
+        image:'https://images.unsplash.com/photo-1598091383021-15ddea10925d?w=900', priceFrom:'30000', priceTo:'150000', rating:'4.8', clicks:1400, favorites:2200, timeSpent:8400, views:14800, status:'approved', amenities:['guide','parking'] 
+      },
+      { id:'23', businessId:'seed-8', kind:'tien-ich', name:'Tour Du thuyền Sông Sài Gòn', category:'Giải trí đêm', region:'Hồ Chí Minh', description:'Thưởng thức bữa tối sang trọng trên sông.', image:'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=900', priceFrom:'800000', priceTo:'2500000', rating:'4.6', clicks:1290, favorites:1380, timeSpent:5800, views:8600, status:'approved', amenities:['ticket','restaurant'] },
+      { id:'24', businessId:'seed-8', kind:'diem-du-lich', name:'Bitexco Skydeck', category:'Ngắm cảnh', region:'Hồ Chí Minh', description:'Toàn cảnh thành phố từ tầng 49.', image:'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=900', priceFrom:'200000', priceTo:'300000', rating:'4.7', clicks:2100, favorites:2400, timeSpent:8200, views:12000, status:'approved', amenities:['ticket'] },
+      // BlueSea Experience (seed-3)
+      { 
+        id:'7', businessId:'seed-3', kind:'diem-du-lich', name:'VinWonders Phú Quốc', category:'Đại vũ trụ giải trí', region:'Phú Quốc', 
+        description:'Hành trình lạc vào những thế giới cổ tích nhiệm màu.', 
+        overview: 'VinWonders Phú Quốc không chỉ là một công viên chủ đề, mà là một đại vũ trụ giải trí nơi những giấc mơ thời thơ ấu được hiện thực hóa. Với quy mô khổng lồ được chia thành 6 phân khu lấy cảm hứng từ các nền văn minh nhân loại, từ Đại lộ Châu Âu lãng mạn đến Thế giới diệu kỳ của Alice, mỗi bước chân của bạn sẽ là một khám phá mới đầy kinh ngạc.',
+        highlights: ['Cung điện Hải vương kỳ ảo', 'Show diễn Once đẳng cấp thế giới', 'Hơn 100 trò chơi cảm giác mạnh'],
+        experience: 'Hãy dành trọn một ngày để lạc lối trong Cung điện Hải vương - một trong những thủy cung lớn nhất thế giới với kiến trúc rùa khổng lồ độc đáo. Đừng bỏ lỡ show diễn Once vào buổi tối, nơi ánh sáng, nước và lửa hòa quyện tạo nên một câu chuyện sử thi mãn nhãn ngay giữa lòng Đảo Ngọc.',
+        openingHours: '09:00 – 19:30 (Show nhạc nước lúc 19h00)',
+        themeColor: '#f97316',
+        image:'https://images.unsplash.com/photo-1708895014570-77efca0d2e0f?w=900', priceFrom:'750000', priceTo:'2100000', rating:'4.6', clicks:2550, favorites:3700, timeSpent:11100, views:13000, status:'approved', amenities:['ticket','wifi','restaurant'] 
+      },
+      // Indochina Heritage (seed-4)
+      { 
+        id:'10', businessId:'seed-4', kind:'diem-du-lich', name:'Tràng An - Ninh Bình', category:'Di sản kép thế giới', region:'Ninh Bình', 
+        description:'Lênh đênh trên dòng Ngô Đồng xuyên qua hang đá.', 
+        overview: 'Được mệnh danh là "Hạ Long trên cạn", Tràng An mang một vẻ đẹp tĩnh mịch và thoát tục đến lạ kỳ. Ngồi trên chiếc thuyền nan nhỏ, bạn sẽ được đưa xuyên qua những hang động đá vôi kỳ ảo, ngắm nhìn những ngôi đền cổ kính nằm nép mình bên vách núi và cảm nhận nhịp chèo khua nước đều đặn giữa không gian sơn thủy hữu tình.',
+        highlights: ['Hệ thống hang động xuyên thủy', 'Phim trường Kong: Skull Island', 'Sắc lúa vàng Tam Cốc'],
+        experience: 'Trải nghiệm ngồi thuyền kéo dài hơn 2 giờ đồng hồ sẽ đưa bạn đi từ bất ngờ này đến bất ngờ khác. Hãy thử chọn tuyến số 2 để tham quan phim trường Kong và chiêm ngưỡng vẻ đẹp của những hang động dài nhất. Nếu đi vào tháng 5, bạn sẽ được thấy cả một dải lụa vàng óng của lúa chín trải dài hai bên bờ sông.',
+        openingHours: '07:30 – 17:00 (Mùa lúa chín là đẹp nhất)',
+        themeColor: '#84cc16',
+        image:'https://images.unsplash.com/photo-1626189303088-e9527e3f0963?w=900', priceFrom:'250000', priceTo:'950000', rating:'4.8', clicks:2390, favorites:3510, timeSpent:10780, views:15980, status:'approved', amenities:['guide','ticket','parking'] 
+      },
+      { 
+        id:'12', businessId:'seed-4', kind:'diem-du-lich', name:'Cố đô Huế', category:'Lịch sử triều đình', region:'Huế', 
+        description:'Kinh thành của vương triều nhà Nguyễn.', 
+        overview: 'Đại Nội Huế là trung tâm chính trị, văn hóa của triều đại nhà Nguyễn suốt 143 năm, mang trong mình vẻ đẹp trầm mặc và uy nghiêm của một thời vàng son. Bước qua cổng Ngọ Môn, bạn sẽ thấy mình như đang lạc bước trong cung điện của những vị vua cuối cùng, nơi những câu chuyện lịch sử vẫn còn vang vọng qua từng nét chạm trổ trên gỗ và gạch đá.',
+        highlights: ['Ngọ Môn Quan uy nghi', 'Điện Thái Hòa rực rỡ', 'Thế Miếu tôn nghiêm'],
+        experience: 'Hãy dành thời gian tìm hiểu về cuộc sống cung đình xưa qua các hiện vật tại bảo tàng, ngắm nhìn kiến trúc cung điện phong kiến và thưởng thức Nhã nhạc cung đình - một kiệt tác di sản phi vật thể. Nếu có thể, hãy tham gia tour đêm để thấy Kinh thành lung linh kỳ ảo dưới ánh đèn.',
+        openingHours: '08:00 – 17:30 (Có tour đêm vào cuối tuần)',
+        themeColor: '#a855f7',
+        image:'https://images.unsplash.com/photo-1584464431734-706795493026?w=900', priceFrom:'150000', priceTo:'300000', rating:'4.7', clicks:1900, favorites:2200, timeSpent:9500, views:13000, status:'approved', amenities:['guide','ticket'] 
+      },
+      // seed-11: Ha Long Bay Cruises
+      { id:'31', businessId:'seed-11', kind:'diem-du-lich', name:'Du thuyền Heritage', category:'Du thuyền hạng sang', region:'Hạ Long', description:'Trải nghiệm nghỉ dưỡng 5 sao trên vịnh.', image:'https://images.unsplash.com/photo-1559592413-7ece35b49c2d?w=900', priceFrom:'5500000', priceTo:'12000000', rating:'4.9', clicks:1800, favorites:2200, timeSpent:11200, views:16200, status:'approved', amenities:['restaurant','wifi'] },
+      { id:'32', businessId:'seed-11', kind:'diem-du-lich', name:'Động Thiên Cung', category:'Hang động', region:'Hạ Long', description:'Vẻ đẹp lộng lẫy của thạch nhũ.', image:'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=900', priceFrom:'50000', priceTo:'100000', rating:'4.7', clicks:1200, favorites:1500, timeSpent:5200, views:8800, status:'approved', amenities:['guide','ticket'] },
+      { id:'33', businessId:'seed-11', kind:'tien-ich', name:'Thủy phi cơ ngắm vịnh', category:'Vận chuyển', region:'Quảng Ninh', description:'Ngắm nhìn Hạ Long từ độ cao 300m.', image:'https://images.unsplash.com/photo-1540962351504-03099e0a754b?w=900', priceFrom:'2500000', priceTo:'4500000', rating:'4.9', clicks:600, favorites:900, timeSpent:3200, views:4200, status:'approved', amenities:['support'] },
+      // seed-12: Mekong Delta Tours
+      { 
+        id:'34', businessId:'seed-12', kind:'diem-du-lich', name:'Chợ nổi Cái Răng', category:'Văn hóa sông nước', region:'Cần Thơ', 
+        description:'Sắc màu rực rỡ và hương vị miền Tây trên sông.', 
+        overview: 'Khi ánh bình minh vừa ló rạng trên dòng sông Hậu, chợ nổi Cái Răng bắt đầu nhịp sống sôi động của mình. Đây là nơi bạn sẽ thấy rõ nét nhất tâm hồn của người dân miền Tây Nam Bộ - đôn hậu, phóng khoáng và đầy sức sống. Hàng trăm chiếc ghe chở đầy nông sản từ khóm, dừa đến đủ loại trái cây rực rỡ sắc màu tạo nên một khung cảnh giao thương độc đáo trên mặt nước.',
+        highlights: ['Thưởng thức hủ tiếu trên ghe', 'Cây bẹo treo nông sản độc đáo', 'Bữa sáng bình minh trên sông'],
+        experience: 'Hãy dậy thật sớm từ 5 giờ sáng để bắt trọn khoảnh khắc đẹp nhất của chợ. Trải nghiệm thú vị nhất chính là thưởng thức một tô hủ tiếu nóng hổi ngay trên mạn thuyền, nhâm nhi ly cafe sữa đá giữa tiếng máy nổ xình xịch và tiếng mời chào rôm rả của các tiểu thương. Đừng quên mua một trái thơm (khóm) gọt sẵn để thưởng thức cái vị ngọt thanh sảng khoái ngay tại chỗ.',
+        openingHours: '05:00 – 09:00 (Sầm uất nhất lúc 6:30)',
+        themeColor: '#fbbf24',
+        image:'https://images.unsplash.com/photo-1528127269322-539801943592?w=900', priceFrom:'150000', priceTo:'300000', rating:'4.8', clicks:2400, favorites:3200, timeSpent:12500, views:18500, status:'approved', amenities:['guide','ticket'] 
+      },
+      { id:'35', businessId:'seed-12', kind:'diem-du-lich', name:'Rừng tràm Trà Sư', category:'Sinh thái', region:'An Giang', description:'Thế giới xanh mướt của bèo cám.', image:'https://images.unsplash.com/photo-1626189303088-e9527e3f0963?w=900', priceFrom:'100000', priceTo:'200000', rating:'4.7', clicks:1500, favorites:1800, timeSpent:8400, views:11200, status:'approved', amenities:['guide','parking'] },
+      { id:'36', businessId:'seed-12', kind:'tien-ich', name:'Tour ăn vặt miền Tây', category:'Ẩm thực', region:'Tiền Giang', description:'Khám phá các món bánh dân gian.', image:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900', priceFrom:'250000', priceTo:'450000', rating:'4.6', clicks:900, favorites:1200, timeSpent:4200, views:6500, status:'approved', amenities:['guide','support'] },
+      // seed-13: Phong Nha Explorers
+      { 
+        id:'37', businessId:'seed-13', kind:'diem-du-lich', name:'Hang Sơn Đoòng', category:'Kỳ quan mạo hiểm', region:'Quảng Bình', 
+        description:'Khám phá hang động lớn nhất hành tinh.', 
+        overview: 'Dành cho những người tìm kiếm giới hạn của bản thân, Sơn Đoòng không chỉ là một cái hang, nó là một thế giới hoàn toàn khác bên dưới mặt đất. Với kích thước có thể chứa cả một tòa nhà 40 tầng, Sơn Đoòng sở hữu hệ sinh thái rừng nhiệt đới riêng biệt, những dòng sông ngầm bí ẩn và những khối thạch nhũ khổng lồ đã hình thành qua hàng triệu năm. Đây là đỉnh cao của mọi chuyến phiêu lưu trên thế giới.',
+        highlights: ['Hố sụt "Vườn địa đàng"', 'Bức tường Việt Nam khổng lồ', 'Ngọc động hiếm có'],
+        experience: 'Đây là một hành trình khắc nghiệt đòi hỏi thể lực và sự chuẩn bị kỹ lưỡng. Bạn sẽ phải đi bộ băng rừng, lội suối và đu dây trong bóng tối để chạm tay vào vẻ đẹp kỳ vĩ của "Bức tường Việt Nam". Cảm giác đón những tia nắng đầu tiên xuyên qua hố sụt rọi thẳng xuống rừng cây bên trong hang là khoảnh khắc sẽ làm thay đổi hoàn toàn định nghĩa của bạn về thiên nhiên.',
+        openingHours: 'Theo tour định kỳ (Cần đặt trước 1 năm)',
+        themeColor: '#475569',
+        image:'https://images.unsplash.com/photo-1589394815804-964ed96aeb33?w=900', priceFrom:'60000000', priceTo:'75000000', rating:'5.0', clicks:5200, favorites:8500, timeSpent:25400, views:48000, status:'approved', amenities:['guide','support','restaurant'] 
+      },
+      { id:'38', businessId:'seed-13', kind:'diem-du-lich', name:'Động Thiên Đường', category:'Hang động', region:'Quảng Bình', description:'Hoàng cung trong lòng đất.', image:'https://images.unsplash.com/photo-1641799767634-3f0f7036cf59?w=900', priceFrom:'250000', priceTo:'450000', rating:'4.9', clicks:2800, favorites:3500, timeSpent:11200, views:19800, status:'approved', amenities:['guide','ticket'] },
+      { id:'39', businessId:'seed-13', kind:'tien-ich', name:'Zipline Hang Tối', category:'Mạo hiểm', region:'Quảng Bình', description:'Trải nghiệm zipline và tắm bùn.', image:'https://images.unsplash.com/photo-1544551763-47a0159f9234?w=900', priceFrom:'350000', priceTo:'550000', rating:'4.7', clicks:1100, favorites:1400, timeSpent:5200, views:7600, status:'approved', amenities:['guide','ticket'] },
+      // seed-14: Nha Trang Diving Center
+      { id:'40', businessId:'seed-14', kind:'diem-du-lich', name:'Đảo Hòn Mun', category:'Bảo tồn biển', region:'Nha Trang', description:'Nơi có rạn san hô phong phú nhất Việt Nam.', image:'https://images.unsplash.com/photo-1518544866330-d6b8bcd6ec5f?w=900', priceFrom:'0', priceTo:'0', rating:'4.8', clicks:3200, favorites:4100, timeSpent:15800, views:22500, status:'approved', amenities:['parking'] },
+      { id:'41', businessId:'seed-14', kind:'tien-ich', name:'Dịch vụ lặn bình khí', category:'Thể thao biển', region:'Nha Trang', description:'Khám phá đại dương sâu thẳm.', image:'https://images.unsplash.com/photo-1544551763-47a0159f9234?w=900', priceFrom:'600000', priceTo:'1200000', rating:'4.9', clicks:1500, favorites:1800, timeSpent:7200, views:9500, status:'approved', amenities:['guide','support'] },
+      { id:'42', businessId:'seed-14', kind:'tien-ich', name:'Đi bộ dưới đáy biển', category:'Trải nghiệm độc đáo', region:'Nha Trang', description:'Ngắm san hô mà không cần biết bơi.', image:'https://images.unsplash.com/photo-1544551763-47a0159f9234?w=900', priceFrom:'800000', priceTo:'1500000', rating:'4.7', clicks:800, favorites:1100, timeSpent:4200, views:6200, status:'approved', amenities:['support'] },
+      // seed-15: Hue Imperial Guides
+      { id:'43', businessId:'seed-15', kind:'diem-du-lich', name:'Lăng Khải Định', category:'Kiến trúc cung đình', region:'Huế', description:'Sự kết hợp độc đáo Đông - Tây.', image:'https://images.unsplash.com/photo-1584464431734-706795493026?w=900', priceFrom:'150000', priceTo:'250000', rating:'4.8', clicks:2100, favorites:2800, timeSpent:11500, views:16000, status:'approved', amenities:['guide','ticket'] },
+      { id:'44', businessId:'seed-15', kind:'diem-du-lich', name:'Chùa Thiên Mụ', category:'Di tích tôn giáo', region:'Huế', description:'Ngôi chùa biểu tượng của cố đô.', image:'https://images.unsplash.com/photo-1512100356956-c1b47f4b8a21?w=900', priceFrom:'0', priceTo:'0', rating:'4.9', clicks:3200, favorites:4500, timeSpent:14200, views:24000, status:'approved', amenities:['guide','parking'] },
+      { id:'45', businessId:'seed-15', kind:'tien-ich', name:'Ca Huế trên sông Hương', category:'Văn hóa dân gian', region:'Huế', description:'Thưởng thức âm nhạc cung đình về đêm.', image:'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=900', priceFrom:'100000', priceTo:'250000', rating:'4.7', clicks:1100, favorites:1500, timeSpent:5200, views:8200, status:'approved', amenities:['ticket','support'] },
+      // seed-16: Phu Quoc Island Life
+      { 
+        id:'46', businessId:'seed-16', kind:'diem-du-lich', name:'Bãi Sao - Phú Quốc', category:'Bãi biển thiên đường', region:'Phú Quốc', 
+        description:'Làn nước xanh trong và bờ cát trắng mịn như kem.', 
+        overview: 'Nếu Phú Quốc là một viên ngọc, thì Bãi Sao chính là tâm điểm lấp lánh nhất của viên ngọc đó. Với đường cong mềm mại như một vầng trăng khuyết, Bãi Sao ôm trọn lấy làn nước xanh ngọc bích êm đềm. Đây là nơi bạn có thể quên đi mọi ưu phiền, chỉ còn lại tiếng sóng vỗ rì rào và cảm giác cát mịn mơn man dưới chân.',
+        highlights: ['Nước biển xanh ngọc bích', 'Cát trắng mịn đặc trưng', 'Hàng dừa nghiêng bóng'],
+        experience: 'Hãy dành một buổi chiều nằm trên chiếc võng dưới tán dừa, nhâm nhi một trái dừa tươi và đọc cuốn sách yêu thích. Khi hoàng hôn buông xuống, hãy thử chèo SUP trên mặt biển phẳng lặng để tận hưởng khoảnh khắc giao thoa tuyệt đẹp của đất trời.',
+        openingHours: 'Đẹp nhất từ tháng 11 đến tháng 4',
+        themeColor: '#0ea5e9',
+        image:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900', priceFrom:'0', priceTo:'0', rating:'4.8', clicks:4200, favorites:5800, timeSpent:22400, views:31000, status:'approved', amenities:['parking','restaurant'] 
+      },
+      { id:'47', businessId:'seed-16', kind:'tien-ich', name:'Tour 4 đảo bằng cano', category:'Khám phá biển', region:'Phú Quốc', description:'Trải nghiệm snorkeling và ăn trưa trên đảo.', image:'https://images.unsplash.com/photo-1589394815804-964ed96aeb33?w=900', priceFrom:'700000', priceTo:'1200000', rating:'4.9', clicks:2500, favorites:3100, timeSpent:12200, views:18500, status:'approved', amenities:['guide','ticket','restaurant'] },
+      { id:'48', businessId:'seed-16', kind:'tien-ich', name:'Dịch vụ câu mực đêm', category:'Trải nghiệm địa phương', region:'Phú Quốc', description:'Trở thành ngư dân thực thụ.', image:'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=900', priceFrom:'350000', priceTo:'500000', rating:'4.6', clicks:900, favorites:1200, timeSpent:5200, views:7500, status:'approved', amenities:['guide','support'] },
+      // seed-17: Sapa Trekking Homestay
+      { id:'49', businessId:'seed-17', kind:'diem-du-lich', name:'Bản Tả Phìn', category:'Văn hóa bản địa', region:'Sa Pa', description:'Vùng đất của người Dao đỏ.', image:'https://images.unsplash.com/photo-1582803279934-2e9f4544f83a?w=900', priceFrom:'40000', priceTo:'40000', rating:'4.7', clicks:1500, favorites:1900, timeSpent:8200, views:11000, status:'approved', amenities:['guide'] },
+      { id:'50', businessId:'seed-17', kind:'tien-ich', name:'Dịch vụ tắm lá thuốc Dao đỏ', category:'Sức khỏe', region:'Sa Pa', description:'Bài thuốc quý từ thiên nhiên.', image:'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=900', priceFrom:'150000', priceTo:'250000', rating:'4.9', clicks:1100, favorites:1600, timeSpent:6200, views:9200, status:'approved', amenities:['support'] },
+      { id:'51', businessId:'seed-17', kind:'tien-ich', name:'Tour trekking mạo hiểm', category:'Mạo hiểm', region:'Sa Pa', description:'Chinh phục những cung đường ít người biết.', image:'https://images.unsplash.com/photo-1501555088652-021faa106b9b?w=900', priceFrom:'800000', priceTo:'1500000', rating:'4.8', clicks:800, favorites:1100, timeSpent:5200, views:6800, status:'approved', amenities:['guide','support'] },
+      // seed-18: Da Nang Beach Club
+      { id:'52', businessId:'seed-18', kind:'diem-du-lich', name:'Bãi biển Non Nước', category:'Biển nghỉ dưỡng', region:'Đà Nẵng', description:'Không gian yên tĩnh và trong lành.', image:'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=900', priceFrom:'0', priceTo:'0', rating:'4.7', clicks:2400, favorites:3100, timeSpent:13200, views:19500, status:'approved', amenities:['parking'] },
+      { id:'53', businessId:'seed-18', kind:'tien-ich', name:'Dịch vụ lướt ván', category:'Thể thao biển', region:'Đà Nẵng', description:'Dành cho những người yêu mạo hiểm.', image:'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=900', priceFrom:'300000', priceTo:'800000', rating:'4.6', clicks:900, favorites:1100, timeSpent:4200, views:6200, status:'approved', amenities:['guide','support'] },
+      { id:'54', businessId:'seed-18', kind:'tien-ich', name:'Pool Party cuối tuần', category:'Giải trí', region:'Đà Nẵng', description:'Âm nhạc và tiệc tùng sôi động.', image:'https://images.unsplash.com/photo-1533777857889-4be7c70b33f7?w=900', priceFrom:'500000', priceTo:'1000000', rating:'4.8', clicks:1500, favorites:1800, timeSpent:6200, views:9800, status:'approved', amenities:['restaurant','wifi'] },
+      // seed-19: Con Dao Paradise
+      { id:'55', businessId:'seed-19', kind:'diem-du-lich', name:'Nhà tù Côn Đảo', category:'Lịch sử', region:'Côn Đảo', description:'Di tích lịch sử hào hùng.', image:'https://images.unsplash.com/photo-1559592413-7ece35b49c2d?w=900', priceFrom:'40000', priceTo:'40000', rating:'4.9', clicks:3100, favorites:4200, timeSpent:18200, views:26000, status:'approved', amenities:['guide','ticket'] },
+      { id:'56', businessId:'seed-19', kind:'diem-du-lich', name:'Bãi Nhát', category:'Thiên nhiên', region:'Côn Đảo', description:'Vẻ đẹp hoang sơ kỳ vĩ.', image:'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=900', priceFrom:'0', priceTo:'0', rating:'4.8', clicks:1800, favorites:2400, timeSpent:9200, views:14200, status:'approved', amenities:['parking'] },
+      { id:'57', businessId:'seed-19', kind:'tien-ich', name:'Dịch vụ xem rùa đẻ trứng', category:'Sinh thái độc đáo', region:'Côn Đảo', description:'Trải nghiệm có một không hai.', image:'https://images.unsplash.com/photo-1544551763-47a0159f9234?w=900', priceFrom:'1200000', priceTo:'1200000', rating:'5.0', clicks:800, favorites:1500, timeSpent:5200, views:8500, status:'approved', amenities:['guide','support'] },
+      // seed-20: Buon Ma Thuot Coffee Tours
+      { id:'58', businessId:'seed-20', kind:'diem-du-lich', name:'Bảo tàng Thế giới Cà phê', category:'Văn hóa', region:'Buôn Ma Thuột', description:'Kiến trúc nhà dài đặc sắc.', image:'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=900', priceFrom:'75000', priceTo:'150000', rating:'4.8', clicks:2200, favorites:3100, timeSpent:11500, views:18500, status:'approved', amenities:['ticket','guide','parking'] },
+      { id:'59', businessId:'seed-20', kind:'diem-du-lich', name:'Thác Dray Nur', category:'Thiên nhiên', region:'Đắk Lắk', description:'Ngọn thác hùng vĩ nhất Tây Nguyên.', image:'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=900', priceFrom:'30000', priceTo:'50000', rating:'4.9', clicks:1800, favorites:2400, timeSpent:9200, views:14800, status:'approved', amenities:['guide','parking'] },
+      { id:'60', businessId:'seed-20', kind:'tien-ich', name:'Trải nghiệm rang xay cà phê', category:'Trải nghiệm', region:'Đắk Lắk', description:'Học cách làm nên ly cà phê hảo hạng.', image:'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=900', priceFrom:'350000', priceTo:'600000', rating:'4.7', clicks:900, favorites:1300, timeSpent:4200, views:7200, status:'approved', amenities:['guide','support'] }
+    ];
+    const LEADERBOARD_SEED = [
+      { id: 'seed-1', name: 'Sunrise Travel Group', score: 86500 },
+      { id: 'seed-2', name: 'Viet Discovery Co.', score: 73400 },
+      { id: 'seed-3', name: 'BlueSea Experience', score: 51250 },
+      { id: 'seed-4', name: 'Indochina Heritage', score: 48900 },
+      { id: 'seed-5', name: 'Eco-Way Vietnam', score: 42100 },
+      { id: 'seed-6', name: 'LuxTravel Advisors', score: 38500 },
+      { id: 'seed-7', name: 'Hanoi Heritage Tours', score: 34200 },
+      { id: 'seed-8', name: 'Saigon Nights Ent.', score: 29800 },
+      { id: 'seed-9', name: 'Coastal Resorts Ltd.', score: 25600 },
+      { id: 'seed-10', name: 'Mountain Peak Guides', score: 21000 },
+      { id: 'seed-11', name: 'Ha Long Bay Cruises', score: 18500 },
+      { id: 'seed-12', name: 'Mekong Delta Tours', score: 15400 },
+      { id: 'seed-13', name: 'Phong Nha Explorers', score: 12800 },
+      { id: 'seed-14', name: 'Nha Trang Diving Center', score: 10200 },
+      { id: 'seed-15', name: 'Hue Imperial Guides', score: 8900 },
+      { id: 'seed-16', name: 'Phu Quoc Island Life', score: 7600 },
+      { id: 'seed-17', name: 'Sapa Trekking Homestay', score: 6200 },
+      { id: 'seed-18', name: 'Da Nang Beach Club', score: 4800 },
+      { id: 'seed-19', name: 'Con Dao Paradise', score: 3500 },
+      { id: 'seed-20', name: 'BMT Coffee Tours', score: 2100 }
+    ];
+    const MOCK_MESSAGES = [
+      { id: 'msg-1', sender: 'Nguyễn Văn A', text: 'Tôi muốn hỏi về giá vé đoàn cho Phố cổ Hội An.', time: '10:30', serviceId: '1', unread: true },
+      { id: 'msg-2', sender: 'Trần Thị B', text: 'Xe đón sân bay có hỗ trợ hành lý cồng kềnh không?', time: '09:15', serviceId: '2', unread: false },
+      { id: 'msg-3', sender: 'Lê Văn C', text: 'Cho hỏi InterContinental có phòng hướng biển không?', time: '08:45', serviceId: '16', unread: true },
+      { id: 'msg-4', sender: 'Phạm Minh D', text: 'Vịnh Hạ Long có tour chèo kayak riêng không?', time: 'Hôm qua', serviceId: '4', unread: false },
+      { id: 'msg-5', sender: 'Admin WanderViệt', text: 'Chúc mừng doanh nghiệp đã đạt hạng Platinum I!', time: 'Hôm qua', serviceId: 'admin', unread: false }
+    ];
+    const RANK_LEVELS = [
+      { key:'bronze-1', rankName:'Bronze I', min:0, max:999, color:'#92400e' },
+      { key:'bronze-2', rankName:'Bronze II', min:1000, max:1999, color:'#92400e' },
+      { key:'bronze-3', rankName:'Bronze III', min:2000, max:2999, color:'#92400e' },
+      { key:'silver-1', rankName:'Silver I', min:3000, max:4999, color:'#9ca3af' },
+      { key:'silver-2', rankName:'Silver II', min:5000, max:6999, color:'#9ca3af' },
+      { key:'silver-3', rankName:'Silver III', min:7000, max:9999, color:'#9ca3af' },
+      { key:'gold-1', rankName:'Gold I', min:10000, max:12999, color:'#facc15' },
+      { key:'gold-2', rankName:'Gold II', min:13000, max:15999, color:'#facc15' },
+      { key:'gold-3', rankName:'Gold III', min:16000, max:19999, color:'#facc15' },
+      { key:'platinum-1', rankName:'Platinum I', min:20000, max:23999, color:'#3b82f6' },
+      { key:'platinum-2', rankName:'Platinum II', min:24000, max:27999, color:'#3b82f6' },
+      { key:'platinum-3', rankName:'Platinum III', min:28000, max:31999, color:'#3b82f6' },
+      { key:'diamond-1', rankName:'Diamond I', min:32000, max:36999, color:'#22d3ee' },
+      { key:'diamond-2', rankName:'Diamond II', min:37000, max:41999, color:'#22d3ee' },
+      { key:'diamond-3', rankName:'Diamond III', min:42000, max:49999, color:'#22d3ee' },
+      { key:'legendary', rankName:'Legendary', min:50000, max:null, color:'#ef4444', glow:true }
+    ];
+
+    const formatVnd = (value) => {
+      const num = Number(value || 0);
+      return num ? `${num.toLocaleString('vi-VN')}đ` : 'Liên hệ';
+    };
+    const getBusinessRanking = (item) => {
+      const views = Number(item.views || 0);
+      const bookings = Number(item.bookings || 0);
+      const rating = Number(item.rating || 5);
+      const score = views * 1 + bookings * 5 + rating * 20;
+
+      const ranks = [
+        { key:'bronze', rankName:'Bronze', min:0, max:39, color:'#d97706' },
+        { key:'silver', rankName:'Silver', min:40, max:99, color:'#94a3b8' },
+        { key:'gold', rankName:'Gold', min:100, max:199, color:'#eab308' },
+        { key:'platinum', rankName:'Platinum', min:200, max:499, color:'#22c55e' },
+        { key:'diamond', rankName:'Diamond', min:500, max:null, color:'#3b82f6', glow:true }
+      ];
+
+      const current = ranks.find((x) => score >= x.min && (x.max === null || score <= x.max)) || ranks[0];
+      const idx = ranks.findIndex((x) => x.key === current.key);
+      const next = idx >= 0 && idx < ranks.length - 1 ? ranks[idx + 1] : null;
+
+      let progressPercent = 100; let pointsToNext = 0;
+      if (current.max !== null) {
+        const range = current.max - current.min + 1;
+        progressPercent = Math.min(100, Math.max(0, ((score - current.min) / range) * 100));
+        pointsToNext = Math.max(0, current.max - score + 1);
+      }
+      return { score, rankName: current.rankName, rankColor: current.color, glow: !!current.glow, progressPercent, pointsToNext, nextRankName: next?.rankName || null };
+    };
+    const getRankByScore = (score) => {
+      const current = RANK_LEVELS.find((x) => score >= x.min && (x.max === null || score <= x.max)) || RANK_LEVELS[0];
+      const idx = RANK_LEVELS.findIndex((x) => x.key === current.key);
+      const next = idx >= 0 && idx < RANK_LEVELS.length - 1 ? RANK_LEVELS[idx + 1] : null;
+      let progressPercent = 100; let pointsToNext = 0;
+      if (current.max !== null) {
+        const range = current.max - current.min + 1;
+        progressPercent = Math.min(100, Math.max(0, ((score - current.min) / range) * 100));
+        pointsToNext = Math.max(0, current.max - score + 1);
+      }
+      return { score, rankName: current.rankName, rankColor: current.color, glow: !!current.glow, progressPercent, pointsToNext, nextRankName: next?.rankName || null };
+    };
+    const getServiceScore = (item) => {
+      const views = Number(item.views || 0);
+      const clicks = Number(item.clicks || 0);
+      const favorites = Number(item.favorites || 0);
+      const timeSpent = Number(item.timeSpent || 0);
+      return views + clicks * 3 + favorites * 5 + timeSpent * 0.5;
+    };
+
+    const thStyle = { textAlign:'left', padding:'0.8rem', borderBottom:'1px solid var(--biz-border)', background:'rgba(255,255,255,0.03)', fontSize:'0.86rem' };
+    const tdStyle = { padding:'0.8rem', borderBottom:'1px solid rgba(255,255,255,0.08)', fontSize:'0.9rem' };
+    const inputStyle = { width:'100%', background:'rgba(255,255,255,0.05)', border:'1px solid var(--biz-border)', padding:'0.65rem 0.75rem', borderRadius:'10px', color:'white', fontFamily:'inherit' };
+
+    /* ============================================================
+       ROOT COMPONENT — Quản lý auth session
+    ============================================================ */
+    function AppRoot() {
+      const [currentUser, setCurrentUser] = useState(null);
+      const [checkingAuth, setCheckingAuth] = useState(true);
+
+      useEffect(() => {
+        // Nếu đã có token hợp lệ → redirect thẳng sang index.html
+        const token = localStorage.getItem('biz_auth_token') ||
+                      sessionStorage.getItem('biz_auth_token') ||
+                      localStorage.getItem('wander_business_token') ||
+                      sessionStorage.getItem('wander_business_token');
+
+        if (token) {
+          // Verify token với server trước khi redirect
+          fetch('/api/auth/business/me', { headers: { 'x-auth-token': token } })
+            .then(r => r.json())
+            .then(data => {
+              if (data.success) {
+                window.location.replace('index.html');
+              } else {
+                // Token không hợp lệ, xóa và hiện form login
+                ['biz_auth_token', 'wander_business_token'].forEach(k => {
+                  localStorage.removeItem(k);
+                  sessionStorage.removeItem(k);
+                });
+                localStorage.removeItem('currentUser');
+                setCheckingAuth(false);
+              }
+            })
+            .catch(() => setCheckingAuth(false));
+          return;
+        }
+
+        setCheckingAuth(false);
+      }, []);
+
+
+      // Real-time Heartbeat (Duy trì trạng thái trực tuyến)
+      useEffect(() => {
+        if (!currentUser) return;
+        const ping = () => {
+          const token = localStorage.getItem('biz_auth_token') || sessionStorage.getItem('biz_auth_token');
+          if (!token) return;
+          fetch('/api/auth/business/me', { headers: { 'x-auth-token': token } }).catch(() => {});
+        };
+        const interval = setInterval(ping, 60000);
+        ping(); // Ping ngay khi đăng nhập
+        return () => clearInterval(interval);
+      }, [currentUser]);
+
+      const handleLoginSuccess = useCallback((user) => {
+        // Redirect tới dashboard thật (index.html)
+        window.location.href = 'index.html';
+      }, []);
+
+      const handleLogout = useCallback(() => {
+        mockAuthService.logout();
+        // Xóa tất cả token keys
+        ['biz_auth_token', 'wander_business_token'].forEach(k => {
+          localStorage.removeItem(k);
+          sessionStorage.removeItem(k);
+        });
+        localStorage.removeItem('currentUser');
+        setCurrentUser(null);
+      }, []);
+
+      if (checkingAuth) {
+        return (
+          <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#040914', flexDirection:'column', gap:'1rem' }}>
+            <div style={{ width:'40px', height:'40px', border:'3px solid rgba(255,255,255,0.07)', borderTopColor:'#00F0FF', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+            <span style={{ color:'#64748b', fontSize:'0.9rem' }}>Đang kiểm tra phiên đăng nhập...</span>
+          </div>
+        );
+      }
+
+      if (!currentUser) {
+        return <AuthScreen onLoginSuccess={handleLoginSuccess} />;
+      }
+
+      // Nếu có currentUser nhưng chưa redirect (fallback) → redirect ngay
+      window.location.replace('index.html');
+      return null;
+    }
+
+    function App({ currentUser, onLogout }) {
+      const [items, setItems] = useState([]);
+      const [activeTab, setActiveTab] = useState('ecosystem');
+      const [searchText, setSearchText] = useState('');
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [editingItem, setEditingItem] = useState(null);
+      const [formData, setFormData] = useState(EMPTY_FORM);
+      const [selectedBusinessId, setSelectedBusinessId] = useState('me');
+      const [detailItem, setDetailItem] = useState(null);
+      const [conversations, setConversations] = useState([]);
+      const [activeConv, setActiveConv] = useState(null);
+      const [replyText, setReplyText] = useState('');
+      const [fullScreenImage, setFullScreenImage] = useState(null);
+      const [leaderboardData, setLeaderboardData] = useState([]);
+      const [notifications, setNotifications] = useState([]);
+      const [showNotifDrawer, setShowNotifDrawer] = useState(false);
+      const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+      // ── Add-to-businesses form state ──
+      const BIZ_EMPTY = { name:'', category:'', location:'', price:'', rating:'5', image:'' };
+      const [newBizForm, setNewBizForm] = useState(BIZ_EMPTY);
+      const [bizFormMsg, setBizFormMsg] = useState('');
+
+      const handleNewBizChange = (e) => {
+        const { name, value } = e.target;
+        setNewBizForm(prev => ({ ...prev, [name]: value }));
+      };
+
+      const addToBizList = (e) => {
+        e.preventDefault();
+        if (!newBizForm.name.trim() || !newBizForm.category.trim() || !newBizForm.location.trim()) {
+          setBizFormMsg('⚠️ Vui lòng nhập tên, danh mục và địa điểm.');
+          return;
+        }
+        const newBiz = {
+          id: Date.now(),
+          ownerId: currentUser.id,
+          name: newBizForm.name.trim(),
+          category: newBizForm.category.trim(),
+          location: newBizForm.location.trim(),
+          price: newBizForm.price ? parseFloat(newBizForm.price) : null,
+          rating: parseFloat(newBizForm.rating) || 5,
+          image: newBizForm.image.trim() || null,
+          views: 0,
+          bookings: 0,
+          description: null
+        };
+        try {
+          var stored = localStorage.getItem('businesses');
+          var list = stored ? JSON.parse(stored) : [];
+          list.push(newBiz);
+          localStorage.setItem('businesses', JSON.stringify(list));
+        } catch(err) {}
+        setNewBizForm(BIZ_EMPTY);
+        setBizFormMsg('✅ Đã thêm \"' + newBiz.name + '\" vào danh sách!');
+        setTimeout(() => setBizFormMsg(''), 3000);
+      };
+
+      // --- Chatbot State ---
+      const [isChatOpen, setIsChatOpen] = useState(false);
+      const [chatMessages, setChatMessages] = useState([
+        { role: 'assistant', content: 'Xin chào! Tôi là Trợ lý AI hỗ trợ doanh nghiệp. Bạn cần tư vấn chiến lược kinh doanh, viết bài PR thu hút khách hay phân tích thị trường?' }
+      ]);
+      const [chatInput, setChatInput] = useState('');
+      const [isTyping, setIsTyping] = useState(false);
+      const chatEndRef = React.useRef(null);
+
+      useEffect(() => {
+        if (chatEndRef.current) {
+          chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+      }, [chatMessages, isTyping, isChatOpen]);
+
+      const handleSendChat = async (e) => {
+        e.preventDefault();
+        if (!chatInput.trim()) return;
+        const newMsg = { role: 'user', content: chatInput };
+        setChatMessages(prev => [...prev, newMsg]);
+        setChatInput('');
+        setIsTyping(true);
+
+        try {
+          const session = mockAuthService.getSession() || {};
+          const token = session.token || '';
+          
+          const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-auth-token': token
+            },
+            body: JSON.stringify({
+              message: newMsg.content,
+              role: 'business'
+            })
+          });
+          const data = await res.json();
+          setIsTyping(false);
+          if (data.success) {
+            setChatMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+          } else {
+            setChatMessages(prev => [...prev, { role: 'assistant', content: data.answer || 'Lỗi hệ thống.' }]);
+          }
+        } catch (err) {
+          setIsTyping(false);
+          setChatMessages(prev => [...prev, { role: 'assistant', content: 'Lỗi kết nối đến Trợ lý AI.' }]);
+        }
+      };
+
+      useEffect(() => {
+        const fetchData = async () => {
+          const token = localStorage.getItem('biz_auth_token') || sessionStorage.getItem('biz_auth_token');
+          if (!token) return;
+          try {
+            // Load items (từ Backend API)
+            const pRes = await fetch('/api/business/places', { headers: { 'x-auth-token': token } });
+            const pJson = await pRes.json();
+            if (pJson.success) {
+              const mapped = pJson.data.map(b => ({
+                ...b,
+                kind: b.kind || (['Khách sạn', 'Ẩm thực', 'Thuê xe', 'Resort'].some(k => (b.category||'').includes(k)) ? 'tien-ich' : 'diem-du-lich'),
+                region: b.region || 'Không rõ',
+                priceFrom: b.priceFrom || 0,
+                status: b.status || 'approved'
+              }));
+              setItems(mapped);
+            }
+
+            // Load conversations
+            const cRes = await fetch('/api/business/messages', { headers: { 'x-auth-token': token } });
+            const cJson = await cRes.json();
+            if (cJson.success) {
+              setConversations(cJson.data || []);
+              if (cJson.data && cJson.data.length > 0 && !activeConv) {
+                setActiveConv(cJson.data[0]);
+              }
+            }
+
+            // Load leaderboard
+            const lRes = await fetch('/api/business/leaderboard');
+            const lJson = await lRes.json();
+            if (lJson.success) setLeaderboardData(lJson.data);
+
+            // Load notifications
+            const nRes = await fetch('/api/notifications', { headers: { 'x-auth-token': token } });
+            const nJson = await nRes.json();
+            if (nJson.success) setNotifications(nJson.data);
+            
+            const uRes = await fetch('/api/notifications/unread-count', { headers: { 'x-auth-token': token } });
+            const uJson = await uRes.json();
+            if (uJson.success) setUnreadNotifCount(uJson.count);
+          } catch (e) {
+            console.error('Fetch error:', e);
+          }
+        };
+
+        fetchData();
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
+      }, [currentUser]);
+
+      const markNotifRead = async (id) => {
+        const token = localStorage.getItem('biz_auth_token') || sessionStorage.getItem('biz_auth_token');
+        await fetch(`/api/notifications/read/${id}`, { method: 'PUT', headers: { 'x-auth-token': token } });
+        setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+        setUnreadNotifCount(prev => Math.max(0, prev - 1));
+      };
+
+      const filteredItems = useMemo(() => {
+        const q = searchText.trim().toLowerCase();
+        if (!q) return items;
+        return items.filter((it) => it.name.toLowerCase().includes(q) || it.region.toLowerCase().includes(q) || it.category.toLowerCase().includes(q) || it.kind.toLowerCase().includes(q));
+      }, [items, searchText]);
+      const rankedItems = useMemo(() => filteredItems.map((it) => ({ ...it, ranking: getBusinessRanking(it) })).sort((a,b) => b.ranking.score - a.ranking.score), [filteredItems]);
+      const approvedItems = useMemo(() => rankedItems.filter((it) => it.status === 'approved'), [rankedItems]);
+      const stats = useMemo(() => {
+        const points = items.filter((it) => it.kind === 'diem-du-lich').length;
+        const amenities = items.filter((it) => it.kind === 'tien-ich').length;
+        const totalViews = items.reduce((sum, it) => sum + (it.views || 0), 0);
+        return { points, amenities, total: items.length, totalViews };
+      }, [items]);
+      const accountRanking = useMemo(() => {
+        const score = currentUser?.points || 0;
+        const serviceSum = items.reduce((sum, item) => sum + getServiceScore(item), 0);
+        const bonus = items.length * 50;
+        return {
+          ...getRankByScore(score),
+          score,
+          serviceSum: Math.round(serviceSum),
+          bonus
+        };
+      }, [currentUser, items]);
+      const leaderboard = useMemo(() => {
+        const currentAccount = { id: currentUser?.id || 'me', name: 'Bạn', score: accountRanking.score };
+        const data = leaderboardData.length > 0 ? leaderboardData.map(d => ({ id: d._id || d.id, name: d.displayName || d.name, score: d.points || 0 })) : LEADERBOARD_SEED;
+        
+        // Filter out current user from seed/data to avoid duplicates if they are already there
+        const filtered = data.filter(d => d.id !== currentAccount.id);
+        
+        return [currentAccount, ...filtered]
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 6)
+          .map((entry, index) => ({ ...entry, rank: getRankByScore(entry.score), position: index + 1 }));
+      }, [accountRanking.score, leaderboardData, currentUser]);
+
+      const openCreate = () => { setEditingItem(null); setFormData(EMPTY_FORM); setIsModalOpen(true); };
+      const openEdit = (item) => { setEditingItem(item); setFormData({ ...item }); setIsModalOpen(true); };
+      const closeModal = () => { setIsModalOpen(false); setEditingItem(null); };
+      const handleImageUpload = (e) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        const rd = new FileReader(); rd.onloadend = () => setFormData((p) => ({ ...p, image: rd.result })); rd.readAsDataURL(file);
+      };
+      const handleAmenityChange = (e) => {
+        const { checked, value } = e.target;
+        setFormData((p) => ({ ...p, amenities: checked ? [...p.amenities, value] : p.amenities.filter((x) => x !== value) }));
+      };
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!formData.name || !formData.category || !formData.region || !formData.address || !formData.description) return window.alert('Vui lòng điền đầy đủ tên, phân loại, khu vực, địa chỉ và mô tả.');
+        
+        const token = localStorage.getItem('biz_auth_token') || sessionStorage.getItem('biz_auth_token');
+        const url = editingItem ? `/api/business/places/${editingItem.id}` : '/api/business/places';
+        const method = editingItem ? 'PUT' : 'POST';
+
+        const payload = { 
+          ...formData,
+          highlights: typeof formData.highlights === 'string' ? formData.highlights.split(',').map(s => s.trim()).filter(Boolean) : formData.highlights
+        };
+
+        try {
+          const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+            body: JSON.stringify(payload)
+          });
+          const json = await res.json();
+          if (json.success) {
+            window.location.reload(); 
+          } else {
+            window.alert(json.message || 'Lỗi lưu dữ liệu');
+          }
+        } catch (e) {
+          window.alert('Lỗi kết nối máy chủ');
+        }
+      };
+      const handleDelete = async (id) => { 
+        if (window.confirm('Bạn có chắc chắn muốn xóa mục này?')) {
+          const token = localStorage.getItem('biz_auth_token') || sessionStorage.getItem('biz_auth_token');
+          try {
+            const res = await fetch(`/api/business/places/${id}`, { 
+              method: 'DELETE',
+              headers: { 'x-auth-token': token }
+            });
+            const json = await res.json();
+            if (json.success) window.location.reload();
+            else window.alert(json.message || 'Lỗi xóa dữ liệu');
+          } catch (e) {
+            window.alert('Lỗi kết nối máy chủ');
+          }
+        }
+      };
+
+      const handleReply = async () => {
+        if (!activeConv || !replyText.trim()) return;
+        const token = localStorage.getItem('biz_auth_token') || sessionStorage.getItem('biz_auth_token');
+        try {
+          const res = await fetch('/api/business/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+            body: JSON.stringify({
+              customerId: activeConv.customerId,
+              customerName: activeConv.customerName,
+              text: replyText
+            })
+          });
+          const json = await res.json();
+          if (json.success) {
+            setReplyText('');
+            // Refresh conversations
+            const cRes = await fetch('/api/business/messages', { headers: { 'x-auth-token': token } });
+            const cJson = await cRes.json();
+            if (cJson.success) {
+              setConversations(cJson.data);
+              const updated = cJson.data.find(c => c.customerId === activeConv.customerId);
+              if (updated) setActiveConv(updated);
+            }
+          }
+        } catch (e) {
+          window.alert('Lỗi gửi tin nhắn');
+        }
+      };
+      const quickApprove = (id) => setItems((p) => p.map((x) => (x.id === id ? { ...x, status: 'approved' } : x)));
+
+      const rankBadge = (ranking) => (
+        <span style={{ display:'inline-flex', alignItems:'center', gap:'0.3rem', padding:'0.2rem 0.55rem', borderRadius:'99px', background:`${ranking.rankColor}22`, color:ranking.rankColor, fontSize:'0.74rem', fontWeight:700, boxShadow: ranking.glow ? `0 0 12px ${ranking.rankColor}66` : 'none' }}>
+          {ranking.glow ? '🔥 ' : ''}{ranking.rankName}
+        </span>
+      );
+
+      return (
+        <div className="biz-layout">
+          <aside className="biz-sidebar">
+            <div className="biz-sidebar-header">
+              <div className="logo-icon">◈</div>
+              <span>TravelBiz</span>
+            </div>
+
+            {/* User info card */}
+            <div style={{ padding:'0 1.2rem 1rem' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', padding:'1rem', background:'rgba(255,255,255,0.04)', borderRadius:'14px', border:'1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ width:'40px', height:'40px', borderRadius:'50%', background:'linear-gradient(135deg,#0055FF,#00F0FF)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:'1.1rem', flexShrink:0 }}>
+                  {(currentUser.displayName || currentUser.name || '?').charAt(0).toUpperCase()}
+                </div>
+                <div style={{ minWidth:0 }}>
+                  <div style={{ fontWeight:700, fontSize:'0.9rem', color:'white', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{currentUser.displayName || currentUser.name}</div>
+                  <div style={{ fontSize:'0.73rem', color:'#64748b', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{currentUser.email}</div>
+                </div>
+              </div>
+            </div>
+
+            <nav className="biz-nav">
+              <div className={`biz-nav-item ${activeTab==='ecosystem' ? 'is-active' : ''}`} onClick={() => setActiveTab('ecosystem')}>
+                <span style={{fontSize:'1.2rem'}}>🏠</span> Trang chủ hệ sinh thái
+              </div>
+              <div className={`biz-nav-item ${activeTab==='manager' ? 'is-active' : ''}`} onClick={() => setActiveTab('manager')}>
+                <span style={{fontSize:'1.2rem'}}>📤</span> Quản lý dịch vụ
+              </div>
+              <div className={`biz-nav-item ${activeTab==='bookings' ? 'is-active' : ''}`} onClick={() => setActiveTab('bookings')}>
+                <span style={{fontSize:'1.2rem'}}>📅</span> Đơn đặt chỗ (Mới)
+              </div>
+              <div className={`biz-nav-item ${activeTab==='broadcast' ? 'is-active' : ''}`} onClick={() => setActiveTab('broadcast')}>
+                <span style={{fontSize:'1.2rem'}}>📢</span> Gửi thông báo
+              </div>
+              <div className={`biz-nav-item ${activeTab==='messages' ? 'is-active' : ''}`} onClick={() => setActiveTab('messages')}>
+                <span style={{fontSize:'1.2rem'}}>💬</span> Hộp thư khách hàng
+              </div>
+              <div className={`biz-nav-item ${activeTab==='public-profile' ? 'is-active' : ''}`} onClick={() => setActiveTab('public-profile')}>
+                <span style={{fontSize:'1.2rem'}}>👤</span> Trang cá nhân
+              </div>
+              <div className={`biz-nav-item ${activeTab==='user-preview' ? 'is-active' : ''}`} onClick={() => setActiveTab('user-preview')}>
+                <span style={{fontSize:'1.2rem'}}>👁️</span> Xem trước phía người dùng
+              </div>
+              <a href="leaderboard.html" className="biz-nav-item" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <span style={{fontSize:'1.2rem'}}>🏆</span> Bảng Xếp Hạng
+              </a>
+            </nav>
+
+            {/* Logout button */}
+            <div style={{ padding:'1.2rem', borderTop:'1px solid var(--biz-border)', marginTop:'auto' }}>
+              <button onClick={onLogout} style={{
+                width:'100%', padding:'0.7rem', borderRadius:'10px',
+                background:'rgba(244,63,94,0.08)', border:'1px solid rgba(244,63,94,0.2)',
+                color:'#f87171', fontWeight:600, cursor:'pointer', fontSize:'0.88rem',
+                fontFamily:'var(--biz-font)', transition:'all 0.2s', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem'
+              }} onMouseEnter={e => e.currentTarget.style.background='rgba(244,63,94,0.18)'}
+                 onMouseLeave={e => e.currentTarget.style.background='rgba(244,63,94,0.08)'}>
+                🚪 Đăng xuất
+              </button>
+            </div>
+          </aside>
+
+          <div className="biz-main">
+            <header className="biz-topbar">
+              <div style={{ display:'flex', alignItems:'center', gap:'1rem', flex:1 }}>
+                <div style={{ background:'var(--biz-surface-light)', borderRadius:'10px', padding:'0.4rem 1rem', display:'flex', alignItems:'center', gap:'0.5rem', width:'360px' }}>
+                  <span>🔎</span>
+                  <input type="text" placeholder="Tìm điểm du lịch, tiện ích..." value={searchText} onChange={(e) => setSearchText(e.target.value)} style={{ background:'none', border:'none', color:'white', width:'100%' }} />
+                </div>
+              </div>
+              
+              <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
+                <div style={{ position:'relative' }}>
+                  <button onClick={() => setShowNotifDrawer(!showNotifDrawer)} style={{ background:'rgba(255,255,255,0.05)', border:'none', width:'42px', height:'42px', borderRadius:'12px', color:'white', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s' }} className="biz-card-hover">
+                    <span style={{ fontSize:'1.2rem' }}>🔔</span>
+                    {unreadNotifCount > 0 && (
+                      <span style={{ position:'absolute', top:'-5px', right:'-5px', background:'#f43f5e', color:'white', fontSize:'0.7rem', fontWeight:800, padding:'2px 6px', borderRadius:'8px', border:'2px solid #040914' }}>
+                        {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                      </span>
+                    )}
+                  </button>
+                  
+                  {showNotifDrawer && (
+                    <div style={{ position:'absolute', top:'55px', right:0, width:'320px', background:'var(--biz-surface-light)', border:'1px solid var(--biz-border)', borderRadius:'16px', boxShadow:'0 20px 50px rgba(0,0,0,0.5)', zIndex:100, overflow:'hidden', animation:'authSlideIn 0.3s ease-out' }}>
+                      <div style={{ padding:'1rem', borderBottom:'1px solid var(--biz-border)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                        <span style={{ fontWeight:700 }}>Thông báo</span>
+                        <span style={{ fontSize:'0.75rem', color:'var(--biz-accent)', cursor:'pointer' }}>Đánh dấu tất cả đã đọc</span>
+                      </div>
+                      <div style={{ maxHeight:'400px', overflowY:'auto' }}>
+                        {notifications.length === 0 ? (
+                          <div style={{ padding:'2rem', textAlign:'center', color:'var(--biz-text-muted)', fontSize:'0.85rem' }}>Không có thông báo nào</div>
+                        ) : (
+                          notifications.map(n => (
+                            <div key={n._id} onClick={() => markNotifRead(n._id)} style={{ padding:'1rem', borderBottom:'1px solid rgba(255,255,255,0.03)', cursor:'pointer', background: n.isRead ? 'transparent' : 'rgba(0,240,255,0.03)', transition:'background 0.2s' }} className="notif-item-hover">
+                              <div style={{ fontWeight: 600, fontSize:'0.88rem', marginBottom:'4px', color: n.isRead ? '#94a3b8' : 'white' }}>{n.title}</div>
+                              <div style={{ fontSize:'0.8rem', color:'#64748b', lineHeight:1.4 }}>{n.message}</div>
+                              <div style={{ fontSize:'0.7rem', color:'#475569', marginTop:'6px' }}>{new Date(n.createdAt).toLocaleString('vi-VN')}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            <main className="biz-content">
+              {activeTab === 'broadcast' && (
+                <div className="animate-fade">
+                   <div className="biz-card" style={{ padding:'2rem', maxWidth:'800px', margin:'0 auto' }}>
+                      <h2 style={{ marginBottom:'1.5rem' }}>📢 Gửi thông báo Broadcast</h2>
+                      <p style={{ color:'var(--biz-text-muted)', marginBottom:'2rem' }}>Gửi tin nhắn trực tiếp đến hàng nghìn người dùng đang quan tâm đến dịch vụ của bạn.</p>
+                      
+                      <div style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+                         <div>
+                            <label style={{ display:'block', marginBottom:'0.5rem', fontWeight:600 }}>Tiêu đề thông báo</label>
+                            <input type="text" placeholder="Ví dụ: Ưu đãi 50% cho khách hàng cũ..." style={{ width:'100%', padding:'0.8rem', borderRadius:'10px', background:'var(--biz-surface-light)', border:'1px solid var(--biz-border)', color:'white' }} />
+                         </div>
+                         <div>
+                            <label style={{ display:'block', marginBottom:'0.5rem', fontWeight:600 }}>Nội dung chi tiết</label>
+                            <textarea placeholder="Nhập nội dung thông báo tại đây..." style={{ width:'100%', minHeight:'150px', padding:'0.8rem', borderRadius:'10px', background:'var(--biz-surface-light)', border:'1px solid var(--biz-border)', color:'white', resize:'none' }}></textarea>
+                         </div>
+                         <div style={{ display:'flex', gap:'1rem' }}>
+                            <button className="biz-btn-primary" style={{ padding:'0.8rem 2rem' }}>Gửi ngay bây giờ</button>
+                            <button style={{ background:'rgba(255,255,255,0.05)', border:'1px solid var(--biz-border)', padding:'0.8rem 2rem', borderRadius:'10px', color:'white', cursor:'pointer' }}>Lên lịch gửi</button>
+                         </div>
+                      </div>
+                   </div>
+                </div>
+              )}
+
+              {activeTab === 'bookings' && (
+                <div className="animate-fade">
+                   <div className="biz-card" style={{ padding:'1.5rem' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.5rem' }}>
+                         <h2 style={{ margin:0 }}>📅 Quản lý đặt chỗ</h2>
+                         <div style={{ display:'flex', gap:'0.5rem' }}>
+                            <button className="biz-tag" style={{ background:'rgba(0,240,255,0.1)', color:'#00F0FF', border:'none', cursor:'pointer' }}>Tất cả</button>
+                            <button className="biz-tag" style={{ background:'transparent', color:'var(--biz-text-muted)', border:'none', cursor:'pointer' }}>Chờ xác nhận</button>
+                            <button className="biz-tag" style={{ background:'transparent', color:'var(--biz-text-muted)', border:'none', cursor:'pointer' }}>Thành công</button>
+                         </div>
+                      </div>
+
+                      <table className="biz-table" style={{ width:'100%', borderCollapse:'collapse' }}>
+                         <thead>
+                            <tr style={{ textAlign:'left', borderBottom:'1px solid var(--biz-border)' }}>
+                               <th style={{ padding:'1rem' }}>Khách hàng</th>
+                               <th style={{ padding:'1rem' }}>Dịch vụ</th>
+                               <th style={{ padding:'1rem' }}>Ngày sử dụng</th>
+                               <th style={{ padding:'1rem' }}>Trạng thái</th>
+                               <th style={{ padding:'1rem' }}>Thao tác</th>
+                            </tr>
+                         </thead>
+                         <tbody>
+                            {[1,2,3].map(i => (
+                               <tr key={i} style={{ borderBottom:'1px solid rgba(255,255,255,0.03)' }}>
+                                  <td style={{ padding:'1rem' }}>
+                                     <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                                        <img src={`https://i.pravatar.cc/150?u=${i}`} style={{ width:'32px', height:'32px', borderRadius:'50%' }} />
+                                        <span>Khách hàng #{i}0${i}</span>
+                                     </div>
+                                  </td>
+                                  <td style={{ padding:'1rem' }}>Dịch vụ du lịch cao cấp</td>
+                                  <td style={{ padding:'1rem' }}>20/05/2024</td>
+                                  <td style={{ padding:'1rem' }}>
+                                     <span style={{ padding:'4px 10px', borderRadius:'6px', background:'rgba(251,191,36,0.1)', color:'#fbbf24', fontSize:'0.75rem' }}>Chờ xác nhận</span>
+                                  </td>
+                                  <td style={{ padding:'1rem' }}>
+                                     <button className="biz-tag" style={{ background:'var(--biz-accent)', color:'var(--biz-bg)', border:'none', cursor:'pointer', marginRight:'5px' }}>Duyệt</button>
+                                     <button className="biz-tag" style={{ background:'rgba(244,63,94,0.1)', color:'#f43f5e', border:'none', cursor:'pointer' }}>Từ chối</button>
+                                  </td>
+                               </tr>
+                            ))}
+                         </tbody>
+                      </table>
+                   </div>
+                </div>
+              )}
+              {activeTab === 'ecosystem' && (
+                <div className="animate-fade">
+                  {/* --- Ecosystem Hero (New Style) --- */}
+                  <section style={{ 
+                    position: 'relative', 
+                    margin: '-2rem -2rem 3rem -2rem', 
+                    padding: '8rem 4rem 10rem 4rem', 
+                    backgroundImage: 'url("https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=2000&q=100")', 
+                    backgroundSize: 'cover', 
+                    backgroundPosition: 'center', 
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    minHeight: '650px',
+                    boxShadow: 'inset 0 0 200px rgba(0,0,0,0.5)'
+                  }}>
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, rgba(4,9,20,0.9) 0%, rgba(4,9,20,0.4) 50%, rgba(4,9,20,0.1) 100%)', zIndex: 1 }}></div>
+                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '150px', background: 'linear-gradient(to top, #040914 0%, transparent 100%)', zIndex: 1 }}></div>
+
+                    <div style={{ position: 'relative', zIndex: 2, maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+                      <h1 style={{ color: 'white', fontSize: '3.5rem', fontWeight: '700', lineHeight: 1.2, marginBottom: '1rem', textShadow: '0 4px 12px rgba(0,0,0,0.5)', letterSpacing: '-0.5px' }}>
+                        Khám phá thế giới <br /> Theo cách của bạn
+                      </h1>
+                      <p style={{ color: '#E2E8F0', fontSize: '1.1rem', marginBottom: '3rem', maxWidth: '500px', textShadow: '0 2px 8px rgba(0,0,0,0.5)', lineHeight: 1.6 }}>
+                        Hàng ngàn doanh nghiệp du lịch uy tín <br /> dành riêng cho bạn
+                      </p>
+
+                      {/* Premium Stats Row */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '3rem', marginTop: '1rem' }}>
+                        {[
+                          { label: 'Tổng doanh thu', val: '1.280.000.000₫', icon: '💰', color: '#10b981' },
+                          { label: 'Lượt xem tháng', val: '45.280', icon: '📊', color: '#3b82f6' },
+                          { label: 'Tỷ lệ chốt đơn', val: '12.5%', icon: '📈', color: '#00F0FF' },
+                          { label: 'Hạng doanh nghiệp', val: accountRanking.rankName, icon: '🏆', color: '#facc15' }
+                        ].map((s, i) => (
+                          <div key={i} style={{ 
+                            background: 'rgba(255,255,255,0.03)', 
+                            border: '1px solid rgba(255,255,255,0.1)', 
+                            borderRadius: '24px', 
+                            padding: '1.8rem',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '1rem',
+                            backdropFilter: 'blur(20px)',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+                            transition: 'all 0.3s'
+                          }} className="biz-card-hover">
+                            <div style={{ width: '45px', height: '45px', borderRadius: '12px', background: `${s.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', color: s.color, border: `1px solid ${s.color}33` }}>
+                              {s.icon}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: '0.85rem', color: 'var(--biz-text-muted)', fontWeight: 600, marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</div>
+                              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', letterSpacing: '-0.5px' }}>{s.val}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Premium Search & Filter Bar */}
+                      <div style={{ 
+                        background: 'rgba(15, 23, 42, 0.8)', 
+                        backdropFilter: 'blur(24px)',
+                        borderRadius: '28px', 
+                        padding: '1rem', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '1rem', 
+                        flexWrap: 'wrap', 
+                        boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
+                        border: '1px solid rgba(255,255,255,0.12)',
+                        marginBottom: '4rem'
+                      }}>
+                        
+                        <div style={{ flex: '1 1 300px', padding: '0.5rem 1.5rem' }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--biz-accent)', fontWeight: '800', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>📍 Tìm kiếm địa điểm</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{fontSize:'1.2rem'}}>🔍</span>
+                            <input id="searchLocation" type="text" placeholder="Hội An, Đà Nẵng, Phú Quốc..." style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1.2rem', color: 'white', background:'transparent', fontWeight: 700 }} />
+                          </div>
+                        </div>
+
+                        <div style={{ flex: '1 1 200px', padding: '0.5rem 1.5rem', borderLeft: '1px solid rgba(255,255,255,0.1)', position: 'relative' }}>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--biz-accent)', fontWeight: '800', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>🏷️ Loại dịch vụ</label>
+                          <select id="searchService" style={{ border: 'none', outline: 'none', width: '100%', fontSize: '1.2rem', color: 'white', background: 'transparent', cursor: 'pointer', appearance: 'none', fontWeight:'700' }}>
+                            <option style={{background: '#060b13'}}>Tất cả dịch vụ</option>
+                            <option style={{background: '#060b13'}}>Khách sạn & Resort</option>
+                            <option style={{background: '#060b13'}}>Tour & Trải nghiệm</option>
+                            <option style={{background: '#060b13'}}>Ẩm thực & Cafe</option>
+                          </select>
+                        </div>
+
+                        <button 
+                          onClick={() => {
+                            const loc = document.getElementById('searchLocation')?.value || '';
+                            const srv = document.getElementById('searchService')?.value || 'Tất cả';
+                            localStorage.setItem('searchQuery', JSON.stringify({ location: loc, service: srv }));
+                            window.location.href = 'results.html';
+                          }}
+                          style={{ 
+                            background: 'var(--biz-gradient-premium)', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: '20px', 
+                            padding: '1.3rem 3rem', 
+                            fontSize: '1.15rem', 
+                            fontWeight: '900', 
+                            cursor: 'pointer', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.8rem', 
+                            transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)', 
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 15px 35px rgba(0, 85, 255, 0.4)'
+                          }} 
+                          onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05) translateY(-3px)'; e.currentTarget.style.boxShadow = '0 20px 45px rgba(0, 240, 255, 0.5)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1) translateY(0)'; e.currentTarget.style.boxShadow = '0 15px 35px rgba(0, 85, 255, 0.4)'; }}
+                        >
+                          TÌM KIẾM NGAY
+                        </button>
+
+                      </div>
+
+                      {/* Service Categories below Search Bar */}
+                      <div style={{ display: 'flex', gap: '0.8rem', marginTop: '2.5rem', flexWrap: 'wrap' }}>
+                        {[
+                          { icon: '🏢', label: 'Khách sạn' },
+                          { icon: '🏔️', label: 'Tour' },
+                          { icon: '🍜', label: 'Ẩm thực' },
+                          { icon: '🏄', label: 'Trải nghiệm' },
+                          { icon: '🎫', label: 'Vé tham quan' },
+                          { icon: '🚘', label: 'Thuê xe' },
+                          { icon: '🎁', label: 'Combo ưu đãi' }
+                        ].map((cat, idx) => (
+                          <button key={idx} style={{ 
+                            background: 'rgba(15, 23, 42, 0.45)', 
+                            backdropFilter: 'blur(8px)', 
+                            border: '1px solid rgba(255,255,255,0.08)', 
+                            borderRadius: '14px', 
+                            padding: '1.2rem 1.5rem', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center', 
+                            gap: '0.6rem', 
+                            color: '#E2E8F0', 
+                            minWidth: '110px',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                          }} onMouseEnter={e => { e.currentTarget.style.background='rgba(30, 41, 59, 0.8)'; e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.borderColor='rgba(0,240,255,0.3)'; e.currentTarget.style.color='white'; }} onMouseLeave={e => { e.currentTarget.style.background='rgba(15, 23, 42, 0.45)'; e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'; e.currentTarget.style.color='#E2E8F0'; }}>
+                            <span style={{ fontSize: '1.6rem', filter: 'hue-rotate(200deg) drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>{cat.icon}</span>
+                            <span style={{ fontSize: '0.85rem', fontWeight: '500' }}>{cat.label}</span>
+                          </button>
+                        ))}
+                      </div>
+
+                    </div>
+                  </section>
+                  <div style={{ marginTop:'2.5rem', marginBottom:'1.5rem', display:'flex', justifyContent:'space-between', alignItems:'flex-end' }}>
+                    <div>
+                      <h2 style={{ fontSize:'1.5rem', fontWeight:'700', color:'white' }}>Điểm đến thịnh hành</h2>
+                      <p style={{ color:'var(--biz-text-muted)', fontSize:'0.9rem' }}>Các lựa chọn phổ biến nhất cho du khách từ Việt Nam</p>
+                    </div>
+                  </div>
+                  
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:'1.5rem', marginBottom:'3rem' }}>
+                    {[
+                      { name: 'Đà Nẵng', img: 'danang_ai.png', desc: 'Thành phố đáng sống với những bãi biển xanh, Cầu Vàng hùng vĩ và Bà Nà Hills đậm chất châu Âu.' },
+                      { name: 'Hội An', img: 'hoian_ai.png', desc: 'Phố cổ rêu phong bên dòng sông Hoài thơ mộng, nổi bật với hoa đăng và kiến trúc giao thoa văn hóa.' },
+                      { name: 'Đà Lạt', img: 'dalat_ai.png', desc: 'Thành phố mờ sương với thời tiết se lạnh quanh năm, ngàn hoa đua sắc và rừng thông bạt ngàn.' },
+                      { name: 'Phú Quốc', img: 'phuquoc_ai.png', desc: 'Đảo ngọc thiên đường với những bãi biển cát trắng mịn màng và đại vũ trụ giải trí sôi động.' },
+                      { name: 'Sa Pa', img: 'sapa_ai.png', desc: 'Chinh phục "nóc nhà Đông Dương", săn mây trên đỉnh núi và khám phá bản sắc văn hóa Tây Bắc.' },
+                      { name: 'Vịnh Hạ Long', img: 'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=1600&q=100', desc: 'Di sản thiên nhiên thế giới với hàng ngàn hòn đảo kỳ vĩ rải rác trên vùng biển ngọc bích.' },
+                      { name: 'Nha Trang', img: 'https://images.unsplash.com/photo-1518544866330-d6b8bcd6ec5f?w=2000&q=100', desc: 'Thành phố biển với vịnh biển lọt top thế giới, rạn san hô rực rỡ và các tour lặn biển hoành tráng.' },
+                      { name: 'Hà Nội', img: 'hanoi_ai.png', desc: 'Thủ đô ngàn năm văn hiến mang vẻ đẹp hoài cổ, 36 phố phường và nền ẩm thực đường phố trứ danh.' },
+                      { name: 'TP. Hồ Chí Minh', img: 'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=1600&q=100', desc: 'Siêu đô thị hiện đại, sầm uất nhộn nhịp về đêm với sự hòa quyện tuyệt vời giữa văn hóa xưa và nay.' },
+                      { name: 'Ninh Bình', img: 'https://images.unsplash.com/photo-1626189303088-e9527e3f0963?w=2000&q=100', desc: 'Được mệnh danh "Hạ Long trên cạn", du ngoạn bằng thuyền qua hệ thống hang động và núi đá vôi kỳ ảo.' }
+                    ].map((dest, idx) => (
+                      <div key={idx} style={{ 
+                        height:'280px', 
+                        borderRadius:'20px', 
+                        overflow:'hidden', 
+                        position:'relative',
+                        cursor:'pointer',
+                        boxShadow:'0 8px 24px rgba(0,0,0,0.4)',
+                        transition:'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s ease'
+                      }} 
+                      onClick={() => setFullScreenImage(dest.img)}
+                      onMouseEnter={e => { e.currentTarget.style.transform='translateY(-6px)'; e.currentTarget.style.boxShadow='0 12px 30px rgba(0,240,255,0.2)'; }} 
+                      onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(0,0,0,0.4)'; }}>
+                        <img src={dest.img} alt={dest.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.7s ease' }} 
+                             onMouseEnter={e => e.currentTarget.style.transform='scale(1.08)'} 
+                             onMouseLeave={e => e.currentTarget.style.transform='scale(1)'} />
+                        <div style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', background:'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 40%, transparent 100%)', pointerEvents:'none' }} />
+                        <div style={{ position:'absolute', bottom:'1.2rem', left:'1.2rem', right:'1.2rem', color:'white', pointerEvents:'none' }}>
+                          <h3 style={{ margin:0, fontSize:'1.4rem', fontWeight:800, textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>{dest.name}</h3>
+                          <div style={{ fontSize:'0.85rem', display:'flex', alignItems:'center', gap:'0.4rem', marginTop:'0.4rem', marginBottom:'0.6rem' }}>
+                            <img src="https://flagcdn.com/w20/vn.png" alt="Vietnam" style={{ width:'18px', borderRadius:'2px', boxShadow:'0 1px 3px rgba(0,0,0,0.5)' }}/>
+                            <span style={{ opacity:0.95, textShadow: '0 1px 2px rgba(0,0,0,0.5)', fontWeight: 600, letterSpacing:'0.5px' }}>Việt Nam</span>
+                          </div>
+                          <p style={{ margin:0, fontSize:'0.9rem', color:'rgba(255,255,255,0.85)', lineHeight:1.5, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden', textOverflow:'ellipsis' }}>
+                            {dest.desc}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:'1.5rem' }}>
+                    <div>
+                      <h2 style={{ fontSize:'1.5rem', fontWeight:'700', color:'white' }}>Khám phá địa điểm & Dịch vụ</h2>
+                      <p style={{ color:'var(--biz-text-muted)', fontSize:'0.9rem' }}>Tổng cộng {approvedItems.length} địa điểm đã được kiểm duyệt</p>
+                    </div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:'1.2rem' }}>
+                    {rankedItems.map((item) => {
+                      const owner = LEADERBOARD_SEED.find(b => b.id === item.businessId) || { name: 'Doanh nghiệp', rank: RANK_LEVELS[0] };
+                      const ranking = item.ranking || getBusinessRanking(item);
+                      const rankKey = ranking.rankName.toLowerCase();
+                      return (
+                        <div key={item.id} className="travel-card" onClick={() => setDetailItem(item)}>
+                          <div className={`travel-card-badge badge-${rankKey}`}>
+                            {ranking.rankName}
+                          </div>
+                          <img src={item.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900'} className="travel-card-img" alt={item.name} />
+                          <div className="travel-card-overlay">
+                            <div style={{ position:'absolute', top:'1rem', right:'1rem' }}>
+                              <button style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '36px', height: '36px', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>❤</button>
+                            </div>
+                            <div style={{ marginBottom: '0.4rem' }}>
+                              <span style={{ fontSize:'0.75rem', background:'rgba(255,255,255,0.1)', padding:'0.2rem 0.6rem', borderRadius:'6px', color:'var(--biz-accent)', fontWeight: 700 }}>
+                                {item.category}
+                              </span>
+                            </div>
+                            <h3 className="travel-card-title">{item.name}</h3>
+                            <div className="travel-card-meta">
+                              <span>📍 {item.region}</span>
+                              <span>⭐ {item.rating}</span>
+                            </div>
+                            <div className="travel-card-price">{formatVnd(item.priceFrom)}</div>
+                            <div style={{ marginTop:'0.8rem' }}>
+                              <div style={{ height:'4px', width:'100%', borderRadius:'99px', background:'rgba(255,255,255,0.1)', overflow:'hidden' }}>
+                                <div style={{ height:'100%', width:`${ranking.progressPercent}%`, background:'var(--biz-gradient)' }} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+
+          {/* DETAIL MODAL - Unique Identity View */}
+          {detailItem && (
+            <div className="biz-modal-overlay animate-fade" style={{ display:'flex' }} onClick={() => setDetailItem(null)}>
+              <button onClick={(e) => { e.stopPropagation(); setDetailItem(null); }} style={{ position:'fixed', top:'2rem', right:'3rem', background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', color:'white', width:'50px', height:'50px', borderRadius:'50%', cursor:'pointer', fontSize:'1.5rem', zIndex:2000, backdropFilter:'blur(12px)', display:'flex', alignItems:'center', justifyContent:'center', transition:'0.3s' }}>✕</button>
+              
+              <div className="biz-modal-content" style={{ 
+                width:'850px', 
+                maxWidth:'96vw', 
+                maxHeight:'92vh', 
+                padding:0, 
+                borderRadius:'28px', 
+                overflowY:'auto', 
+                overflowX:'hidden', 
+                boxShadow: `0 25px 50px -12px ${detailItem.themeColor || '#000'}44`,
+                position:'relative'
+              }} onClick={e => e.stopPropagation()}>
+                <div style={{ height:'360px', position:'relative' }}>
+                  <img src={detailItem.image} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                  <div style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', background:`linear-gradient(to bottom, transparent 20%, ${detailItem.themeColor || '#00d2ff'}22, var(--biz-bg))` }} />
+                  <div style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', background:'linear-gradient(to right, rgba(4,9,20,0.8), transparent)' }} />
+                  
+                  {/* Removed old button here */}
+                  
+                  <div style={{ position:'absolute', bottom:'2rem', left:'2.5rem', zIndex:10 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'0.8rem', marginBottom:'0.8rem' }}>
+                      <span style={{ padding:'0.4rem 1rem', background: detailItem.themeColor || 'var(--biz-accent)', color:'black', fontWeight:800, borderRadius:'10px', fontSize:'0.7rem', letterSpacing:'1px' }}>
+                        {detailItem.kind === 'diem-du-lich' ? 'KHÁM PHÁ' : 'DỊCH VỤ'}
+                      </span>
+                      {rankBadge(detailItem.ranking || getBusinessRanking(detailItem))}
+                    </div>
+                    <h1 style={{ fontSize:'3.2rem', margin:0, color:'white', fontWeight:800, textShadow: '0 4px 20px rgba(0,0,0,0.6)', lineHeight:1.1 }}>{detailItem.name}</h1>
+                    <div style={{ display:'flex', gap:'1rem', marginTop:'0.8rem', color:'rgba(255,255,255,0.8)', fontSize:'0.95rem' }}>
+                      <span>📍 {detailItem.region}</span>
+                      <span>•</span>
+                      <span>🏷️ {detailItem.category}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style={{ padding:'2.5rem', display:'grid', gridTemplateColumns:'1.5fr 1fr', gap:'3rem', background:'var(--biz-bg)' }}>
+                  <div>
+                    <section style={{ marginBottom:'2.5rem' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'0.6rem', marginBottom:'1rem' }}>
+                        <div style={{ width:'4px', height:'24px', background: detailItem.themeColor || 'var(--biz-accent)', borderRadius:'2px' }} />
+                        <h3 style={{ color: 'white', fontSize:'1.25rem', margin:0 }}>Bản sắc & Câu chuyện</h3>
+                      </div>
+                      <p style={{ color:'var(--biz-text-dim)', fontSize:'1.05rem', lineHeight:1.7 }}>{detailItem.overview || 'Một phần không thể thiếu trong hành trình khám phá vẻ đẹp Việt Nam.'}</p>
+                    </section>
+
+                    <section style={{ marginBottom:'2.5rem' }}>
+                      <h4 style={{ color:'white', fontSize:'1rem', marginBottom:'1.2rem', opacity:0.8 }}>Điểm nhấn đặc sắc</h4>
+                      <div style={{ display:'grid', gap:'0.8rem' }}>
+                        {(detailItem.highlights || ['Trải nghiệm đẳng cấp', 'Vị trí đắc địa', 'Dịch vụ tận tâm']).map((h, i) => (
+                          <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'1rem', color:'white', fontSize:'1rem' }}>
+                            <span style={{ color: detailItem.themeColor || 'var(--biz-accent)', marginTop:'0.2rem' }}>✦</span> 
+                            <span>{h}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section style={{ marginBottom:'4rem' }}>
+                      <h4 style={{ color:'white', fontSize:'1rem', marginBottom:'1rem', opacity:0.8 }}>Gợi ý trải nghiệm</h4>
+                      <div style={{ padding:'1.2rem', background:'rgba(255,255,255,0.03)', borderRadius:'16px', border:'1px solid rgba(255,255,255,0.05)' }}>
+                        <p style={{ color:'var(--biz-text-dim)', fontSize:'0.95rem', lineHeight:1.6, margin:0 }}>{detailItem.experience || 'Hãy để tâm hồn bạn hòa mình vào không gian tuyệt vời này.'}</p>
+                      </div>
+                    </section>
+                  </div>
+
+                  <div>
+                    <div style={{ background:'var(--biz-surface)', padding:'2rem', borderRadius:'24px', border:'1px solid var(--biz-border)', position:'sticky', top:'1.5rem', boxShadow:'0 20px 40px rgba(0,0,0,0.3)' }}>
+                      <div style={{ marginBottom:'2rem' }}>
+                        <div style={{ fontSize:'0.8rem', color:'var(--biz-text-muted)', marginBottom:'0.6rem', textTransform:'uppercase', letterSpacing:'1px' }}>🕒 Thời gian lý tưởng</div>
+                        <div style={{ color:'white', fontWeight:600, fontSize:'1.1rem' }}>{detailItem.openingHours || '08:00 - 20:00'}</div>
+                      </div>
+
+                      <div style={{ marginBottom:'2rem' }}>
+                        <div style={{ fontSize:'0.8rem', color:'var(--biz-text-muted)', marginBottom:'0.6rem', textTransform:'uppercase', letterSpacing:'1px' }}>💰 Mức giá tham khảo</div>
+                        <div style={{ color: detailItem.themeColor || 'var(--biz-accent)', fontSize:'1.8rem', fontWeight:900 }}>
+                          {detailItem.priceFrom === '0' || detailItem.priceFrom === 'Miễn phí' ? 'MIỄN PHÍ' : formatVnd(detailItem.priceFrom)}
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom:'2rem', paddingTop:'2rem', borderTop:'1px solid rgba(255,255,255,0.08)' }}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1.2rem' }}>
+                          <span style={{ fontSize:'1.4rem', fontWeight:800, color:'white' }}>⭐ {detailItem.rating} <span style={{ fontSize:'0.85rem', opacity:0.5, fontWeight:400 }}>/ 5.0</span></span>
+                          <span style={{ fontSize:'0.85rem', color:'var(--biz-text-muted)' }}>{(detailItem.views || 0).toLocaleString()} lượt quan tâm</span>
+                        </div>
+                        <div style={{ display:'flex', gap:'0.5rem', flexWrap:'wrap' }}>
+                          {detailItem.amenities.map(a => (
+                            <span key={a} style={{ fontSize:'0.75rem', padding:'0.35rem 0.75rem', background:'rgba(255,255,255,0.05)', borderRadius:'8px', color:'var(--biz-text-dim)', border:'1px solid rgba(255,255,255,0.03)' }}>
+                              {AMENITY_OPTIONS.find(opt => opt.value === a)?.label || a}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button className="btn-biz" style={{ 
+                        width:'100%', 
+                        padding:'1.2rem', 
+                        background: detailItem.themeColor || 'var(--biz-accent)', 
+                        color: 'black',
+                        fontWeight: 900,
+                        border: 'none',
+                        borderRadius: '16px',
+                        cursor: 'pointer',
+                        fontSize:'1.1rem',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: `0 10px 20px -5px ${detailItem.themeColor || '#00d2ff'}66`
+                      }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.filter = 'brightness(1.1)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.filter = 'brightness(1)'; }}>
+                        Đặt trải nghiệm ngay
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+              {activeTab === 'manager' && (
+                <div className="animate-fade">
+                  <h1 style={{ marginTop:0 }}>Quản lý tải lên điểm du lịch và tiện ích</h1>
+                  <p style={{ color:'var(--biz-text-muted)' }}>Mỗi mục mới sẽ ở trạng thái chờ duyệt. Bạn có thể chỉnh sửa thông tin và duyệt nhanh để xem thử ngoài giao diện người dùng.</p>
+
+                  {/* ── Quick-add form ── */}
+                  <form onSubmit={addToBizList} style={{ background:'rgba(255,255,255,0.04)', border:'1px solid var(--biz-border)', borderRadius:'14px', padding:'1.25rem 1.5rem', marginBottom:'1.5rem', marginTop:'1rem' }}>
+                    <p style={{ color:'var(--biz-text-muted)', fontSize:'0.85rem', marginBottom:'1rem', fontWeight:'600', textTransform:'uppercase', letterSpacing:'0.05em' }}>Thêm dịch vụ / doanh nghiệp mới</p>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:'0.75rem', marginBottom:'0.75rem' }}>
+                      <div>
+                        <label style={{ display:'block', fontSize:'0.8rem', color:'var(--biz-text-muted)', marginBottom:'0.3rem' }}>Tên *</label>
+                        <input name="name" value={newBizForm.name} onChange={handleNewBizChange} placeholder="Ví dụ: Resort Bảo Ninh" style={{ width:'100%', boxSizing:'border-box', background:'rgba(255,255,255,0.06)', border:'1px solid var(--biz-border)', borderRadius:'8px', padding:'0.5rem 0.75rem', color:'white', fontSize:'0.9rem' }} />
+                      </div>
+                      <div>
+                        <label style={{ display:'block', fontSize:'0.8rem', color:'var(--biz-text-muted)', marginBottom:'0.3rem' }}>Danh mục *</label>
+                        <select name="category" value={newBizForm.category} onChange={handleNewBizChange} style={{ width:'100%', boxSizing:'border-box', background:'#1e293b', border:'1px solid var(--biz-border)', borderRadius:'8px', padding:'0.5rem 0.75rem', color:'white', fontSize:'0.9rem' }}>
+                          <option value="">-- Chọn --</option>
+                          <option>Khách sạn</option>
+                          <option>Tour</option>
+                          <option>Ẩm thực</option>
+                          <option>Vé tham quan</option>
+                          <option>Thuê xe</option>
+                          <option>Trải nghiệm</option>
+                          <option>Combo ưu đãi</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display:'block', fontSize:'0.8rem', color:'var(--biz-text-muted)', marginBottom:'0.3rem' }}>Địa điểm *</label>
+                        <input name="location" value={newBizForm.location} onChange={handleNewBizChange} placeholder="Ví dụ: Quảng Bình" style={{ width:'100%', boxSizing:'border-box', background:'rgba(255,255,255,0.06)', border:'1px solid var(--biz-border)', borderRadius:'8px', padding:'0.5rem 0.75rem', color:'white', fontSize:'0.9rem' }} />
+                      </div>
+                      <div>
+                        <label style={{ display:'block', fontSize:'0.8rem', color:'var(--biz-text-muted)', marginBottom:'0.3rem' }}>Giá (đồng)</label>
+                        <input name="price" value={newBizForm.price} onChange={handleNewBizChange} type="number" min="0" placeholder="Ví dụ: 850000" style={{ width:'100%', boxSizing:'border-box', background:'rgba(255,255,255,0.06)', border:'1px solid var(--biz-border)', borderRadius:'8px', padding:'0.5rem 0.75rem', color:'white', fontSize:'0.9rem' }} />
+                      </div>
+                      <div>
+                        <label style={{ display:'block', fontSize:'0.8rem', color:'var(--biz-text-muted)', marginBottom:'0.3rem' }}>Rating (mặc định 5)</label>
+                        <input name="rating" value={newBizForm.rating} onChange={handleNewBizChange} type="number" min="1" max="5" step="0.1" style={{ width:'100%', boxSizing:'border-box', background:'rgba(255,255,255,0.06)', border:'1px solid var(--biz-border)', borderRadius:'8px', padding:'0.5rem 0.75rem', color:'white', fontSize:'0.9rem' }} />
+                      </div>
+                      <div>
+                        <label style={{ display:'block', fontSize:'0.8rem', color:'var(--biz-text-muted)', marginBottom:'0.3rem' }}>URL ảnh (tùy chọn)</label>
+                        <input name="image" value={newBizForm.image} onChange={handleNewBizChange} placeholder="https://..." style={{ width:'100%', boxSizing:'border-box', background:'rgba(255,255,255,0.06)', border:'1px solid var(--biz-border)', borderRadius:'8px', padding:'0.5rem 0.75rem', color:'white', fontSize:'0.9rem' }} />
+                      </div>
+                    </div>
+                    <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
+                      <button type="submit" className="btn-biz btn-biz--primary" style={{ padding:'0.55rem 1.5rem' }}>+ Thêm mới</button>
+                      {bizFormMsg && <span style={{ fontSize:'0.875rem', color: bizFormMsg.startsWith('⚠') ? '#fcd34d' : '#6ee7b7' }}>{bizFormMsg}</span>}
+                    </div>
+                  </form>
+
+                  <div style={{ marginTop:'1rem', overflowX:'auto', border:'1px solid var(--biz-border)', borderRadius:'14px' }}>
+                    <table style={{ width:'100%', minWidth:'1100px', borderCollapse:'collapse' }}>
+                      <thead><tr><th style={thStyle}>Tên</th><th style={thStyle}>Loại</th><th style={thStyle}>Khu vực</th><th style={thStyle}>Thống kê</th><th style={thStyle}>Giá từ</th><th style={thStyle}>Xếp hạng</th><th style={thStyle}>Trạng thái</th><th style={thStyle}>Thao tác</th></tr></thead>
+                      <tbody>
+                        {rankedItems.map((item) => (
+                          <tr key={item.id}>
+                            <td style={tdStyle}><strong>{item.name}</strong><br /><small style={{ color:'#9ca3af' }}>{item.category}</small></td>
+                            <td style={tdStyle}>{item.kind === 'diem-du-lich' ? 'Điểm du lịch' : 'Tiện ích'}</td>
+                            <td style={tdStyle}>{item.region}</td>
+                            <td style={tdStyle}>
+                              <div style={{ fontSize:'0.85rem', color:'#cbd5e1' }}>
+                                👁 {item.views || 0} &nbsp; 
+                                📅 {item.bookings || 0} &nbsp; 
+                                ⭐ {item.rating || 5}
+                              </div>
+                            </td>
+                            <td style={tdStyle}>{formatVnd(item.priceFrom)}</td>
+                            <td style={tdStyle}>
+                              {rankBadge(item.ranking)} <small style={{ color:'#cbd5e1' }}>({Math.round(item.ranking.score).toLocaleString('vi-VN')})</small>
+                              <div style={{ marginTop:'0.35rem' }}><div style={{ height:'5px', width:'180px', borderRadius:'99px', background:'rgba(255,255,255,0.16)', overflow:'hidden' }}><div style={{ height:'100%', width:`${item.ranking.progressPercent}%`, background:item.ranking.rankColor }} /></div></div>
+                            </td>
+                            <td style={tdStyle}><span style={{ padding:'0.2rem 0.55rem', borderRadius:'99px', background:item.status === 'approved' ? 'rgba(16,185,129,0.18)' : 'rgba(245,158,11,0.18)', color:item.status === 'approved' ? '#6ee7b7' : '#fcd34d' }}>{item.status === 'approved' ? 'Đã duyệt' : 'Chờ duyệt'}</span></td>
+                            <td style={tdStyle}>
+                              <div style={{ display:'flex', gap:'0.45rem' }}>
+                                <button className="btn-biz btn-biz--ghost" onClick={() => openEdit(item)}>Sửa</button>
+                                {item.status !== 'approved' && <button className="btn-biz btn-biz--primary" onClick={() => quickApprove(item.id)}>Duyệt nhanh</button>}
+                                <button className="btn-biz btn-biz--danger" onClick={() => handleDelete(item.id)}>Xóa</button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'user-preview' && (
+                <div className="animate-fade">
+                  <h1 style={{ marginTop:0 }}>Xem trước phía người dùng</h1>
+                  <p style={{ color:'var(--biz-text-muted)' }}>Đây là cách các mục đã duyệt sẽ xuất hiện cho khách du lịch lựa chọn (giao diện tương tự nhưng tách biệt hệ sinh thái doanh nghiệp).</p>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:'1.25rem', marginTop:'1rem' }}>
+                    {approvedItems.map((item) => (
+                      <article key={item.id} className="travel-card">
+                        <img src={item.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900'} className="travel-card-img" alt={item.name} />
+                        <div className="travel-card-overlay">
+                          <h3 className="travel-card-title" style={{ fontSize:'1.2rem' }}>{item.name}</h3>
+                          <div style={{ marginTop:'0.35rem' }}>{rankBadge(item.ranking)}</div>
+                          <div style={{ fontSize:'0.82rem', color:'#93c5fd' }}>{item.kind === 'diem-du-lich' ? 'Điểm du lịch' : 'Tiện ích'} • {item.region}</div>
+                          <div style={{ marginTop:'0.45rem', fontSize:'0.85rem', color:'#e2e8f0' }}>{item.description}</div>
+                          <div className="travel-card-meta"><span>⭐ {item.rating}</span><span>💰 {formatVnd(item.priceFrom)}</span></div>
+                          <div style={{ marginTop:'0.35rem' }}><div style={{ height:'6px', width:'100%', borderRadius:'99px', background:'rgba(255,255,255,0.16)', overflow:'hidden' }}><div style={{ height:'100%', width:`${item.ranking.progressPercent}%`, background:item.ranking.rankColor }} /></div></div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'messages' && (
+                <div className="animate-fade">
+                  <header style={{ marginBottom:'1.5rem' }}>
+                    <h1 style={{ margin:0 }}>Hộp thư khách hàng</h1>
+                    <p style={{ color:'var(--biz-text-muted)', margin:'0.5rem 0 0' }}>Phản hồi tin nhắn từ khách hàng quan tâm đến dịch vụ của bạn.</p>
+                  </header>
+                  <div style={{ display:'grid', gridTemplateColumns:'300px 1fr', gap:'1px', background:'var(--biz-border)', borderRadius:'16px', overflow:'hidden', border:'1px solid var(--biz-border)', height:'600px' }}>
+                    <div style={{ background:'var(--biz-bg-elevated)', display:'flex', flexDirection:'column' }}>
+                      <div style={{ padding:'1rem', borderBottom:'1px solid var(--biz-border)' }}>
+                        <input type="text" placeholder="Tìm hội thoại..." style={{ ...inputStyle, fontSize:'0.85rem' }} />
+                      </div>
+                      <div style={{ flex:1, overflowY:'auto' }}>
+                        {conversations.length === 0 && (
+                          <div style={{ padding:'2rem', textAlign:'center', color:'var(--biz-text-muted)', fontSize:'0.9rem' }}>Chưa có tin nhắn nào</div>
+                        )}
+                        {conversations.map((c) => (
+                          <div key={c.customerId} onClick={() => setActiveConv(c)} style={{ padding:'1rem', borderBottom:'1px solid var(--biz-border)', cursor:'pointer', background: activeConv?.customerId === c.customerId ? 'rgba(0, 240, 255, 0.08)' : 'transparent', transition:'0.2s' }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.25rem' }}>
+                              <strong style={{ fontSize:'0.95rem' }}>{c.customerName}</strong>
+                              <span style={{ fontSize:'0.75rem', color:'var(--biz-text-muted)' }}>{new Date(c.time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                            <div style={{ fontSize:'0.82rem', color: c.unreadCount > 0 ? 'var(--biz-text)' : 'var(--biz-text-muted)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                              {c.lastMessage}
+                            </div>
+                            {c.unreadCount > 0 && <div style={{ marginTop:'0.4rem', fontSize:'0.7rem', color:'var(--biz-accent)' }}>● {c.unreadCount} tin nhắn mới</div>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ background:'var(--biz-bg)', display:'flex', flexDirection:'column' }}>
+                      {activeConv ? (
+                        <>
+                          <div style={{ padding:'1rem 1.5rem', borderBottom:'1px solid var(--biz-border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                            <div>
+                              <h3 style={{ margin:0, fontSize:'1.1rem' }}>{activeConv.customerName}</h3>
+                              <div style={{ fontSize:'0.8rem', color:'var(--biz-accent)' }}>ID: {activeConv.customerId}</div>
+                            </div>
+                          </div>
+                          <div style={{ flex:1, padding:'1.5rem', overflowY:'auto', display:'flex', flexDirection:'column', gap:'1rem' }}>
+                            {activeConv.messages.map((m, idx) => (
+                              <div key={idx} style={{ 
+                                alignSelf: m.senderRole === 'business' ? 'flex-end' : 'flex-start', 
+                                maxWidth:'80%', 
+                                background: m.senderRole === 'business' ? 'var(--biz-primary)' : 'var(--biz-surface-light)', 
+                                padding:'0.8rem 1rem', 
+                                borderRadius: m.senderRole === 'business' ? '14px 14px 0 14px' : '14px 14px 14px 0', 
+                                fontSize:'0.9rem' 
+                              }}>
+                                {m.text}
+                                <div style={{ fontSize:'0.7rem', opacity:0.5, marginTop:'0.4rem' }}>{new Date(m.createdAt).toLocaleTimeString()}</div>
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ padding:'1.2rem', borderTop:'1px solid var(--biz-border)', display:'flex', gap:'0.8rem' }}>
+                            <input type="text" placeholder="Nhập tin nhắn..." value={replyText} onChange={(e) => setReplyText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleReply()} style={inputStyle} />
+                            <button className="btn-biz btn-biz--primary" onClick={handleReply}>Gửi</button>
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', color:'var(--biz-text-muted)' }}>
+                          Chọn một hội thoại để bắt đầu
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'public-profile' && (
+                <div className="animate-fade">
+                  <header style={{ marginBottom:'1.5rem', display:'flex', justifyContent:'space-between', alignItems:'flex-end', flexWrap:'wrap', gap:'1rem' }}>
+                    <div>
+                      <h1 style={{ margin:0 }}>Trang doanh nghiệp (Công khai)</h1>
+                      <p style={{ color:'var(--biz-text-muted)', margin:'0.5rem 0 0' }}>Xem trước cách khách du lịch nhìn thấy hồ sơ của các doanh nghiệp trên hệ thống.</p>
+                    </div>
+                    <div style={{ display:'flex', gap:'0.8rem', alignItems:'center' }}>
+                      <span style={{ fontSize:'0.85rem', color:'var(--biz-text-muted)' }}>Xem hồ sơ của:</span>
+                      <select 
+                        value={selectedBusinessId} 
+                        onChange={(e) => setSelectedBusinessId(e.target.value)}
+                        style={{ ...inputStyle, width:'240px', fontSize:'0.85rem' }}
+                      >
+                        <option value="me">Doanh nghiệp của bạn</option>
+                        {LEADERBOARD_SEED.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                      <button className="btn-biz btn-biz--primary">Sao chép liên kết</button>
+                    </div>
+                  </header>
+
+                  {(() => {
+                    let rawBiz;
+                    let bizItems;
+
+                    if (selectedBusinessId === 'me') {
+                      rawBiz = { id: 'me', name: 'Doanh nghiệp của bạn', score: accountRanking.score };
+                      bizItems = items.filter(it => !it.businessId || it.businessId === 'me');
+                    } else {
+                      rawBiz = LEADERBOARD_SEED.find(b => b.id === selectedBusinessId);
+                      bizItems = items.filter(it => it.businessId === selectedBusinessId);
+                    }
+
+                    if (!rawBiz) return <div style={{ padding:'2rem', textAlign:'center' }}>Không tìm thấy thông tin doanh nghiệp.</div>;
+                    
+                    const biz = { ...rawBiz, rank: getRankByScore(rawBiz.score) };
+                    const bizStats = {
+                      rating: 4.5 + (Math.random() * 0.5),
+                      reviews: Math.floor(500 + Math.random() * 2000)
+                    };
+                    
+                    return (
+                      <div style={{ background:'var(--biz-bg-elevated)', borderRadius:'24px', overflow:'hidden', border:'1px solid var(--biz-border)' }}>
+                        <div style={{ height:'240px', background:`linear-gradient(135deg, ${biz.rank.rankColor}88, #3b82f6)`, position:'relative' }}>
+                          <div style={{ position:'absolute', bottom:'-40px', left:'40px', width:'120px', height:'120px', borderRadius:'24px', background:'#0B1426', border:'4px solid #0B1426', overflow:'hidden' }}>
+                            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(biz.name)}&background=0055FF&color=fff&size=120`} alt="Logo" style={{ width:'100%', height:'100%' }} />
+                          </div>
+                        </div>
+                        <div style={{ padding:'60px 40px 40px' }}>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
+                            <div>
+                              <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
+                                <h2 style={{ margin:0, fontSize:'1.8rem' }}>{biz.name}</h2>
+                                {rankBadge(biz.rank)}
+                              </div>
+                              <div style={{ display:'flex', gap:'1rem', marginTop:'0.5rem', color:'var(--biz-text-muted)' }}>
+                                <span>📍 {bizItems[0]?.region || 'Việt Nam'}</span>
+                                <span>⭐ {bizStats.rating.toFixed(1)} ({bizStats.reviews.toLocaleString()} đánh giá)</span>
+                              </div>
+                            </div>
+                            <div style={{ display:'flex', gap:'0.8rem' }}>
+                              <button className="btn-biz btn-biz--primary">Theo dõi</button>
+                              <button className="btn-biz btn-biz--ghost">Nhắn tin</button>
+                            </div>
+                          </div>
+
+                          <div style={{ marginTop:'2.5rem', display:'grid', gridTemplateColumns:'2fr 1fr', gap:'2.5rem' }}>
+                            <div>
+                              <h3 style={{ borderBottom:'2px solid var(--biz-accent)', display:'inline-block', paddingBottom:'0.4rem', marginBottom:'1.2rem' }}>Dịch vụ nổi bật ({bizItems.length})</h3>
+                              <div style={{ display:'grid', gap:'1.2rem' }}>
+                                {bizItems.length > 0 ? bizItems.map(it => (
+                                  <div key={it.id} style={{ display:'flex', gap:'1.2rem', padding:'1rem', background:'var(--biz-surface-light)', borderRadius:'16px', border:'1px solid var(--biz-border)' }}>
+                                    <img src={it.image} style={{ width:'140px', height:'100px', objectFit:'cover', borderRadius:'12px' }} />
+                                    <div style={{ flex:1 }}>
+                                      <h4 style={{ margin:0, fontSize:'1.1rem' }}>{it.name}</h4>
+                                      <p style={{ fontSize:'0.85rem', color:'var(--biz-text-muted)', margin:'0.4rem 0' }}>{it.description}</p>
+                                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                                        <span style={{ color:'var(--biz-accent)', fontWeight:600 }}>{formatVnd(it.priceFrom)}</span>
+                                        <div style={{ display:'flex', gap:'0.5rem' }}>
+                                          {it.amenities.slice(0,2).map(a => <span key={a} style={{ fontSize:'0.7rem', color:'var(--biz-text-muted)' }}>• {AMENITY_OPTIONS.find(o => o.value === a)?.label}</span>)}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )) : (
+                                  <div style={{ padding:'2rem', textAlign:'center', color:'var(--biz-text-muted)' }}>Chưa có dịch vụ nào được công khai.</div>
+                                )}
+                              </div>
+                            </div>
+                            <div>
+                              <h3 style={{ borderBottom:'2px solid var(--biz-accent)', display:'inline-block', paddingBottom:'0.4rem', marginBottom:'1.2rem' }}>Tiện ích cung cấp</h3>
+                              <div style={{ display:'flex', flexWrap:'wrap', gap:'0.6rem' }}>
+                                {Array.from(new Set(bizItems.flatMap(it => it.amenities))).map(val => {
+                                  const opt = AMENITY_OPTIONS.find(o => o.value === val);
+                                  return opt ? (
+                                    <span key={val} style={{ padding:'0.4rem 0.8rem', background:'var(--biz-surface-light)', borderRadius:'99px', fontSize:'0.8rem', border:'1px solid var(--biz-border)' }}>
+                                      {opt.label}
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
+                              <div style={{ marginTop:'2.5rem', padding:'1.5rem', background:'rgba(0, 240, 255, 0.05)', borderRadius:'20px', border:'1px solid rgba(0, 240, 255, 0.2)' }}>
+                                <h4 style={{ margin:'0 0 0.8rem' }}>Thông tin liên hệ</h4>
+                                <div style={{ display:'flex', flexDirection:'column', gap:'0.6rem', fontSize:'0.85rem' }}>
+                                  <span>📧 contact@{biz.name.toLowerCase().replace(/\s+/g, '')}.com</span>
+                                  <span>📞 +84 905 {Math.floor(100000 + Math.random() * 899999)}</span>
+                                  <span>🌐 {biz.name.toLowerCase().replace(/\s+/g, '')}.com.vn</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </main>
+          </div>
+
+          {/* --- Chatbot Widget --- */}
+          <div style={{ position:'fixed', bottom:'2rem', right:'2rem', zIndex:9999, display:'flex', flexDirection:'column', alignItems:'flex-end' }}>
+            {isChatOpen && (
+              <div className="animate-fade-up" style={{ width:'360px', height:'500px', background:'rgba(10,15,30,0.95)', backdropFilter:'blur(16px)', border:'1px solid rgba(0,240,255,0.3)', borderRadius:'20px', marginBottom:'1rem', display:'flex', flexDirection:'column', overflow:'hidden', boxShadow:'0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0,240,255,0.1)' }}>
+                <div style={{ padding:'1rem', background:'linear-gradient(90deg, rgba(0,240,255,0.1) 0%, transparent 100%)', borderBottom:'1px solid rgba(255,255,255,0.05)', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                    <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:'linear-gradient(135deg, #00F0FF, #0080FF)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'1.2rem' }}>🤖</div>
+                    <div>
+                      <h3 style={{ margin:0, fontSize:'1rem', fontWeight:600, color:'#fff' }}>WanderViệt AI</h3>
+                      <span style={{ fontSize:'0.75rem', color:'#00F0FF' }}>Chuyên gia Doanh nghiệp</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setIsChatOpen(false)} style={{ background:'none', border:'none', color:'var(--biz-text-muted)', cursor:'pointer', fontSize:'1.5rem', lineHeight:1 }}>&times;</button>
+                </div>
+                
+                <div style={{ flex:1, overflowY:'auto', padding:'1rem', display:'flex', flexDirection:'column', gap:'1rem' }}>
+                  {chatMessages.map((msg, i) => (
+                    <div key={i} style={{ display:'flex', gap:'0.75rem', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}>
+                      {msg.role === 'assistant' && <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:'rgba(0,240,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.8rem', flexShrink:0 }}>AI</div>}
+                      <div style={{ padding:'0.75rem 1rem', borderRadius:'14px', fontSize:'0.9rem', lineHeight:'1.5', maxWidth:'85%',
+                        background: msg.role === 'user' ? 'var(--biz-primary)' : 'rgba(255,255,255,0.05)',
+                        borderBottomRightRadius: msg.role === 'user' ? 0 : '14px',
+                        borderBottomLeftRadius: msg.role === 'assistant' ? 0 : '14px',
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                  {isTyping && (
+                    <div style={{ display:'flex', gap:'0.75rem' }}>
+                      <div style={{ width:'28px', height:'28px', borderRadius:'8px', background:'rgba(0,240,255,0.2)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.8rem', flexShrink:0 }}>AI</div>
+                      <div style={{ padding:'0.75rem 1rem', borderRadius:'14px', fontSize:'0.9rem', background:'rgba(255,255,255,0.05)', borderBottomLeftRadius:0, color:'var(--biz-text-muted)' }}>
+                        <span className="dot-typing">Đang phân tích</span>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+                
+                <form onSubmit={handleSendChat} style={{ padding:'1rem', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', gap:'0.5rem', background:'rgba(0,0,0,0.2)' }}>
+                  <input type="text" value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Hỏi chuyên gia AI..." style={{ flex:1, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'0.75rem', color:'#fff', outline:'none', fontSize:'0.9rem' }} />
+                  <button type="submit" disabled={!chatInput.trim() || isTyping} style={{ background:'linear-gradient(135deg, #00F0FF, #0080FF)', border:'none', borderRadius:'10px', width:'42px', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', cursor: chatInput.trim() ? 'pointer' : 'not-allowed', opacity: chatInput.trim() ? 1 : 0.5 }}>
+                    ➤
+                  </button>
+                </form>
+              </div>
+            )}
+            
+            <button onClick={() => setIsChatOpen(!isChatOpen)} style={{ width:'60px', height:'60px', borderRadius:'50%', background:'linear-gradient(135deg, #00F0FF, #0080FF)', border:'none', color:'#fff', fontSize:'1.8rem', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', boxShadow:'0 8px 32px rgba(0,240,255,0.4)', transition:'transform 0.2s' }} onMouseOver={e=>e.currentTarget.style.transform='scale(1.1)'} onMouseOut={e=>e.currentTarget.style.transform='scale(1)'}>
+              {isChatOpen ? '×' : '✨'}
+            </button>
+          </div>
+
+          {isModalOpen && (
+            <div className="biz-modal-overlay animate-fade" onClick={closeModal}>
+              <div className="biz-modal-content" style={{ maxWidth:'760px' }} onClick={(e) => e.stopPropagation()}>
+                <header style={{ display:'flex', justifyContent:'space-between', marginBottom:'1.2rem' }}>
+                  <h2 style={{ margin:0 }}>{editingItem ? 'Chỉnh sửa mục đã tải lên' : 'Tải lên điểm du lịch / tiện ích'}</h2>
+                  <button style={{ background:'none', border:'none', color:'white', fontSize:'1.5rem', cursor:'pointer' }} onClick={closeModal}>×</button>
+                </header>
+                <form onSubmit={handleSubmit} style={{ display:'grid', gap:'0.95rem' }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.9rem' }}>
+                    <div><label>Loại mục</label><select value={formData.kind} onChange={(e) => setFormData((p) => ({ ...p, kind:e.target.value }))} style={inputStyle}><option value="diem-du-lich">Điểm du lịch</option><option value="tien-ich">Tiện ích</option></select></div>
+                    <div><label>Tên mục *</label><input value={formData.name} onChange={(e) => setFormData((p) => ({ ...p, name:e.target.value }))} style={inputStyle} /></div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.9rem' }}>
+                    <div><label>Phân loại *</label><input value={formData.category} onChange={(e) => setFormData((p) => ({ ...p, category:e.target.value }))} style={inputStyle} /></div>
+                    <div><label>Khu vực *</label><input value={formData.region} onChange={(e) => setFormData((p) => ({ ...p, region:e.target.value }))} style={inputStyle} /></div>
+                  </div>
+                  <div><label>Địa chỉ chi tiết *</label><input value={formData.address} onChange={(e) => setFormData((p) => ({ ...p, address:e.target.value }))} style={inputStyle} /></div>
+                  <div><label>Mô tả *</label><textarea rows="3" value={formData.description} onChange={(e) => setFormData((p) => ({ ...p, description:e.target.value }))} style={inputStyle}></textarea></div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:'0.8rem' }}>
+                    <div><label>Giá từ *</label><input type="number" value={formData.priceFrom} onChange={(e) => setFormData((p) => ({ ...p, priceFrom:e.target.value }))} style={inputStyle} /></div>
+                    <div><label>Giá đến</label><input type="number" value={formData.priceTo} onChange={(e) => setFormData((p) => ({ ...p, priceTo:e.target.value }))} style={inputStyle} /></div>
+                    <div><label>Giờ mở</label><input type="time" value={formData.openTime} onChange={(e) => setFormData((p) => ({ ...p, openTime:e.target.value }))} style={inputStyle} /></div>
+                    <div><label>Giờ đóng</label><input type="time" value={formData.closeTime} onChange={(e) => setFormData((p) => ({ ...p, closeTime:e.target.value }))} style={inputStyle} /></div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.9rem' }}>
+                    <div><label>Màu chủ đề (Theme)</label><input type="color" value={formData.themeColor} onChange={(e) => setFormData((p) => ({ ...p, themeColor:e.target.value }))} style={{ ...inputStyle, height:'45px', padding:'2px' }} /></div>
+                    <div><label>Điểm nhấn (cách nhau dấu phẩy)</label><input value={Array.isArray(formData.highlights) ? formData.highlights.join(', ') : formData.highlights} onChange={(e) => setFormData((p) => ({ ...p, highlights:e.target.value }))} style={inputStyle} placeholder="Vị trí đẹp, Dịch vụ 5 sao..." /></div>
+                  </div>
+                  <div><label>Nội dung giới thiệu chi tiết (Overview)</label><textarea rows="4" value={formData.overview} onChange={(e) => setFormData((p) => ({ ...p, overview:e.target.value }))} style={inputStyle} placeholder="Kể câu chuyện về địa điểm này..."></textarea></div>
+                  <div><label>Gợi ý trải nghiệm (Experience)</label><textarea rows="3" value={formData.experience} onChange={(e) => setFormData((p) => ({ ...p, experience:e.target.value }))} style={inputStyle} placeholder="Khuyên khách hàng nên làm gì khi đến đây..."></textarea></div>
+                  
+                  {/* Nested Data (JSON Arrays) */}
+                  <div style={{ padding:'1rem', background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'12px', marginTop:'0.5rem' }}>
+                    <h4 style={{ margin:'0 0 1rem 0', color:'white' }}>Dữ liệu liên kết (JSON)</h4>
+                    <div style={{ display:'grid', gap:'0.8rem' }}>
+                      <div><label>Địa điểm vui chơi (amusementPlaces)</label><textarea rows="2" value={typeof formData.amusementPlaces === 'string' ? formData.amusementPlaces : JSON.stringify(formData.amusementPlaces || [])} onChange={(e) => setFormData((p) => ({ ...p, amusementPlaces:e.target.value }))} style={{...inputStyle, fontFamily:'monospace'}} placeholder='[{"name":"..."}]'></textarea></div>
+                      <div><label>Nơi lưu trú (accommodations)</label><textarea rows="2" value={typeof formData.accommodations === 'string' ? formData.accommodations : JSON.stringify(formData.accommodations || [])} onChange={(e) => setFormData((p) => ({ ...p, accommodations:e.target.value }))} style={{...inputStyle, fontFamily:'monospace'}} placeholder='[{"name":"..."}]'></textarea></div>
+                      <div><label>Nhà hàng (diningPlaces)</label><textarea rows="2" value={typeof formData.diningPlaces === 'string' ? formData.diningPlaces : JSON.stringify(formData.diningPlaces || [])} onChange={(e) => setFormData((p) => ({ ...p, diningPlaces:e.target.value }))} style={{...inputStyle, fontFamily:'monospace'}} placeholder='[{"name":"..."}]'></textarea></div>
+                      <div><label>Điểm check-in (checkInSpots)</label><textarea rows="2" value={typeof formData.checkInSpots === 'string' ? formData.checkInSpots : JSON.stringify(formData.checkInSpots || [])} onChange={(e) => setFormData((p) => ({ ...p, checkInSpots:e.target.value }))} style={{...inputStyle, fontFamily:'monospace'}} placeholder='[{"name":"..."}]'></textarea></div>
+                    </div>
+                  </div>
+                  <div>
+                    <label>Tiện ích đi kèm</label>
+                    <div style={{ display:'flex', gap:'0.75rem', flexWrap:'wrap', marginTop:'0.35rem' }}>
+                      {AMENITY_OPTIONS.map((o) => (
+                        <label key={o.value} style={{ fontSize:'0.86rem' }}>
+                          <input type="checkbox" value={o.value} checked={formData.amenities.includes(o.value)} onChange={handleAmenityChange} /> {o.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div><label>Ảnh đại diện</label><input type="file" accept="image/*" onChange={handleImageUpload} />{formData.image && <img src={formData.image} style={{ width:'100%', height:'140px', objectFit:'cover', marginTop:'0.5rem', borderRadius:'10px' }} />}</div>
+                  <div style={{ display:'flex', justifyContent:'flex-end', gap:'0.75rem', marginTop:'0.35rem' }}>
+                    <button type="button" className="btn-biz btn-biz--ghost" onClick={closeModal}>Hủy</button>
+                    <button type="submit" className="btn-biz btn-biz--primary">Lưu tải lên</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {fullScreenImage && (
+            <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.95)', backdropFilter:'blur(8px)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem', cursor:'zoom-out' }} onClick={() => setFullScreenImage(null)}>
+              <img src={fullScreenImage.replace('w=800', 'w=1600').replace('&h=220', '&h=1080').replace('&h=250', '&h=1080')} alt="Phóng to" style={{ width:'95vw', height:'95vh', objectFit:'contain', borderRadius:'12px', filter:'drop-shadow(0 20px 50px rgba(0,0,0,0.8))', animation:'fadeIn 0.3s ease-out' }} />
+              <button style={{ position:'absolute', top:'1.5rem', right:'1.5rem', background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.3)', color:'white', fontSize:'2.5rem', width:'56px', height:'56px', borderRadius:'50%', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s', lineHeight:0, zIndex:10000 }} onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.3)'; e.currentTarget.style.transform='scale(1.1)'; }} onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.15)'; e.currentTarget.style.transform='scale(1)'; }}>×</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<AppRoot />);
+  </script>
+</body>
+</html>

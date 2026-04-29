@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dịch vụ Đối tác — WanderViệt</title>
+  <meta name="description" content="Khám phá các tour du lịch, dịch vụ và tiện ích cao cấp do đối tác doanh nghiệp WanderViệt cung cấp." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="global-tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ── Hero ─────────────────────────────────── */
+    .biz-hero {
+      padding: 5rem 0 3rem;
+      background: linear-gradient(135deg, #0a0f1e 0%, #0f172a 50%, #1a0a2e 100%);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .biz-hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(99,102,241,0.15) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 30%, rgba(245,158,11,0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .biz-hero h1 { font-size: clamp(2.2rem, 5vw, 3.5rem); margin-bottom: 1rem; font-family: 'Outfit', sans-serif; }
+    .biz-hero p  { font-size: 1.1rem; color: #94a3b8; max-width: 560px; margin: 0 auto 2rem; line-height: 1.7; }
+
+    /* ── Stats Bar ────────────────────────────── */
+    .biz-stats-bar {
+      display: flex; justify-content: center; gap: clamp(1rem, 5vw, 4rem);
+      padding: 2rem 0;
+      margin-top: 1rem;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    .biz-stat { 
+      display: flex; flex-direction: column; align-items: center;
+      min-width: 120px;
+    }
+    .biz-stat__num { 
+      font-size: 2.5rem; font-weight: 800; color: var(--accent-warm); 
+      font-family: 'Outfit', sans-serif; 
+      line-height: 1;
+      margin-bottom: 0.5rem;
+      text-shadow: 0 0 20px rgba(245,158,11,0.3);
+    }
+    .biz-stat__lbl { 
+      font-size: 0.85rem; color: #94a3b8; 
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+
+    /* ── Filter Bar ───────────────────────────── */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 0.75rem;
+      align-items: center;
+      padding: 1.5rem 0;
+    }
+    .filter-bar .filter-label { font-size: 0.9rem; color: #64748b; font-weight: 600; margin-right: 0.5rem; }
+    .filter-chip {
+      padding: 0.5rem 1.2rem; border-radius: 50px;
+      border: 1.5px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      color: #94a3b8; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .filter-chip:hover { border-color: var(--accent-warm); color: white; }
+    .filter-chip.active { background: var(--accent-warm); border-color: var(--accent-warm); color: white; box-shadow: 0 4px 15px rgba(245,158,11,0.35); }
+
+    .sort-select {
+      margin-left: auto; padding: 0.5rem 1rem;
+      background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 10px; color: #94a3b8; font-size: 0.88rem; cursor: pointer;
+    }
+    .sort-select option { background: #1e293b; }
+
+    /* ── Result meta ──────────────────────────── */
+    .result-meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
+    .result-meta strong { color: white; }
+
+    /* ── Grid ────────────────────────────────── */
+    .biz-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.75rem;
+      padding-bottom: 3rem;
+    }
+
+    /* ── Card ────────────────────────────────── */
+    .biz-card {
+      background: var(--bg-elevated, #1e293b);
+      border-radius: 20px; overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column;
+    }
+    .biz-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 24px 48px rgba(0,0,0,0.5);
+      border-color: rgba(245,158,11,0.4);
+    }
+    .biz-card__img {
+      height: 210px; background-size: cover; background-position: center;
+      position: relative; flex-shrink: 0;
+    }
+    .biz-card__img::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
+      background: linear-gradient(to top, rgba(0,0,0,0.6), transparent);
+    }
+    .biz-card__badges {
+      position: absolute; top: 1rem; left: 1rem; right: 1rem;
+      display: flex; gap: 0.5rem; flex-wrap: wrap;
+    }
+    .badge {
+      padding: 0.3rem 0.8rem; border-radius: 50px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.4px;
+    }
+    .badge--partner { background: var(--accent-warm); color: #fff; box-shadow: 0 4px 12px rgba(245,158,11,0.4); }
+    .badge--kind    { background: rgba(99,102,241,0.85); color: #fff; backdrop-filter: blur(4px); }
+    .badge--pending { background: rgba(239,68,68,0.85); color: #fff; }
+
+    .biz-card__price-tag {
+      position: absolute; bottom: 1rem; right: 1rem; z-index: 2;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 0.4rem 0.9rem; border-radius: 10px;
+      font-size: 0.9rem; font-weight: 800; color: #fbbf24;
+    }
+
+    .biz-card__content { padding: 1.25rem 1.5rem 1.5rem; flex: 1; display: flex; flex-direction: column; }
+    .biz-card__owner {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.8rem; color: var(--accent-primary, #6366f1);
+      font-weight: 600; margin-bottom: 0.6rem;
+    }
+    .biz-card__owner::before { content: '🏢'; font-size: 0.9rem; }
+    .biz-card__title {
+      font-size: 1.1rem; font-weight: 700; color: white;
+      margin-bottom: 0.5rem; line-height: 1.4;
+    }
+    .biz-card__location {
+      font-size: 0.83rem; color: #64748b; margin-bottom: 0.8rem;
+    }
+    .biz-card__location::before { content: '📍 '; }
+    .biz-card__rating {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 0.85rem; margin-bottom: 1.25rem;
+    }
+    .stars { color: #fbbf24; letter-spacing: 1px; }
+    .rating-num { font-weight: 700; color: white; }
+    .review-cnt { color: #64748b; }
+    .fav-cnt { margin-left: auto; color: #f43f5e; font-size: 0.85rem; }
+
+    .biz-card__actions { display: flex; gap: 0.7rem; margin-top: auto; }
+    .btn-biz {
+      flex: 1; padding: 0.75rem 0.5rem; border-radius: 12px;
+      font-weight: 700; font-size: 0.88rem;
+      text-align: center; cursor: pointer; transition: all 0.2s; border: none;
+    }
+    .btn-biz--primary { background: var(--accent-warm); color: white; }
+    .btn-biz--primary:hover { filter: brightness(1.1); transform: scale(1.02); }
+    .btn-biz--outline {
+      background: rgba(255,255,255,0.06);
+      color: white; border: 1.5px solid rgba(255,255,255,0.12);
+      flex: 0 0 48px; padding: 0.75rem;
+    }
+    .btn-biz--outline:hover { background: rgba(255,255,255,0.12); }
+
+    /* ── Empty / Loading ─────────────────────── */
+    .state-box {
+      grid-column: 1 / -1; text-align: center;
+      padding: 5rem 2rem; color: #64748b;
+    }
+    .spinner {
+      width: 44px; height: 44px;
+      border: 3px solid rgba(99,102,241,0.15);
+      border-top-color: var(--accent-primary, #6366f1);
+      border-radius: 50%; animation: spin 0.9s linear infinite;
+      margin: 0 auto 1.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .state-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .state-box h3 { font-size: 1.25rem; color: #94a3b8; margin-bottom: 0.5rem; }
+
+    /* ── Search ──────────────────────────────── */
+    .biz-search-wrap {
+      position: relative; max-width: 420px;
+    }
+    .biz-search {
+      width: 100%; padding: 0.7rem 1rem 0.7rem 2.8rem;
+      background: rgba(255,255,255,0.05); border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 12px; color: white; font-size: 0.9rem; outline: none;
+      transition: border-color 0.2s;
+    }
+    .biz-search:focus { border-color: var(--accent-primary, #6366f1); }
+    /* Fix for hidden attribute being overridden by !important */
+    [hidden] { display: none !important; }
+
+    .slide-drawer {
+      z-index: 2000;
+      /* Đảm bảo drawer không chiếm không gian khi đóng */
+      visibility: hidden;
+    }
+    .slide-drawer.is-open {
+      visibility: visible;
+    }
+  </style>
+
+</head>
+<body>
+  <header class="site-header" id="header-container"></header>
+
+  <main>
+    <!-- Hero -->
+    <section class="biz-hero">
+      <div class="container" style="position:relative; z-index:1;">
+        <h1 class="text-gradient">Cộng đồng Đối tác</h1>
+        <p>Khám phá tour du lịch, dịch vụ và tiện ích cao cấp được cung cấp bởi các đối tác uy tín của WanderViệt.</p>
+
+        <div class="biz-stats-bar" id="biz-stats-bar">
+          <div class="biz-stat">
+            <div class="biz-stat__num" id="stat-total">—</div>
+            <div class="biz-stat__lbl">Dịch vụ & Tour</div>
+          </div>
+          <div class="biz-stat">
+            <div class="biz-stat__num" id="stat-partners">—</div>
+            <div class="biz-stat__lbl">Đối tác doanh nghiệp</div>
+          </div>
+          <div class="biz-stat">
+            <div class="biz-stat__num" id="stat-reviews">—</div>
+            <div class="biz-stat__lbl">Đánh giá từ khách hàng</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filter + Grid -->
+    <section class="section">
+      <div class="container">
+
+        <!-- Filter bar -->
+        <div class="filter-bar">
+          <span class="filter-label">Lọc:</span>
+          <button class="filter-chip active" data-filter="all">🌐 Tất cả</button>
+          <button class="filter-chip" data-filter="diem-du-lich">🏝️ Tour / Điểm đến</button>
+          <button class="filter-chip" data-filter="tien-ich">🏨 Tiện ích & Dịch vụ</button>
+          <button class="filter-chip" data-filter="am-thuc">🍜 Ẩm thực</button>
+          <div class="biz-search-wrap" style="margin-left:auto; margin-right:0.5rem;">
+            <span class="biz-search-icon">🔍</span>
+            <input type="search" class="biz-search" id="biz-search" placeholder="Tìm dịch vụ..." />
+          </div>
+          <select class="sort-select" id="biz-sort">
+            <option value="newest">Mới nhất</option>
+            <option value="rating">Đánh giá cao</option>
+            <option value="price-asc">Giá thấp nhất</option>
+            <option value="price-desc">Giá cao nhất</option>
+            <option value="popular">Yêu thích</option>
+          </select>
+        </div>
+
+        <div class="result-meta" id="biz-result-meta"></div>
+        <div id="biz-services-grid-custom" class="biz-grid">
+          <div class="state-box">
+            <div class="spinner"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <!-- Booking Modal -->
+  <div data-modal="booking" class="modal" hidden>
+    <div class="modal__inner" style="max-width:460px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+      <div style="padding:2rem;">
+        <button class="modal__close" data-modal-close style="position:absolute;top:1rem;right:1rem;font-size:1.5rem;color:#444;">×</button>
+        <h3 style="margin-bottom:0.3rem;color:#f59e0b;">📅 Đặt dịch vụ</h3>
+        <p id="booking-place-name" style="font-weight:700;margin-bottom:1.5rem;color:#1a1a2e;font-size:1.05rem;"></p>
+        <form id="booking-form">
+          <input type="hidden" id="booking-place-id">
+          <div style="margin-bottom:1rem;">
+            <label style="display:block;font-size:0.88rem;margin-bottom:0.4rem;font-weight:600;color:#444;">Ngày sử dụng</label>
+            <input type="date" id="booking-date" required style="width:100%;padding:0.8rem;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.95rem;">
+          </div>
+          <div style="margin-bottom:1rem;">
+            <label style="display:block;font-size:0.88rem;margin-bottom:0.4rem;font-weight:600;color:#444;">Số lượng khách</label>
+            <input type="number" id="booking-people" value="1" min="1" required style="width:100%;padding:0.8rem;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.95rem;">
+          </div>
+          <div style="margin-bottom:1rem;">
+            <label style="display:block;font-size:0.88rem;margin-bottom:0.4rem;font-weight:600;color:#444;">Họ và tên</label>
+            <input type="text" id="booking-customer-name" required placeholder="Tên của bạn" style="width:100%;padding:0.8rem;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.95rem;">
+          </div>
+          <div style="margin-bottom:1.5rem;">
+            <label style="display:block;font-size:0.88rem;margin-bottom:0.4rem;font-weight:600;color:#444;">Số điện thoại</label>
+            <input type="tel" id="booking-phone" required placeholder="0901 234 567" style="width:100%;padding:0.8rem;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.95rem;">
+          </div>
+          <button type="submit" style="width:100%;padding:1rem;background:#f59e0b;color:white;border:none;border-radius:12px;font-weight:800;font-size:1rem;cursor:pointer;transition:filter 0.2s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">XÁC NHẬN ĐẶT CHỖ</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div data-modal="place" class="slide-drawer" hidden>
+    <button class="modal-close-v2" data-modal-close aria-label="Đóng">✕</button>
+    <div data-place-detail></div>
+  </div>
+  <div data-modal-backdrop class="modal-backdrop" hidden></div>
+
+  <script src="SharedUI.js"></script>
+  <script src="main.js"></script>
+  <script>
+  (function() {
+    var allPlaces = [];
+    var currentFilter = 'all';
+    var currentSort = 'newest';
+    var currentSearch = '';
+
+    var KIND_LABEL = {
+      'diem-du-lich': 'Tour / Điểm đến',
+      'tien-ich': 'Tiện ích',
+      'am-thuc': 'Ẩm thực',
+    };
+
+    function formatPrice(p) {
+      if (!p) return null;
+      var n = parseInt(p);
+      if (isNaN(n) || n === 0) return null;
+      if (n >= 1000000) return (n / 1000000).toFixed(1).replace('.0','') + 'M ₫';
+      if (n >= 1000) return Math.round(n/1000) + 'K ₫';
+      return n.toLocaleString('vi-VN') + ' ₫';
+    }
+
+    function stars(rating) {
+      var r = Math.round(parseFloat(rating) || 0);
+      return '★'.repeat(Math.min(r,5)) + '☆'.repeat(Math.max(0, 5 - r));
+    }
+
+    function renderCard(p) {
+      var price = formatPrice(p.priceFrom);
+      var kindLabel = KIND_LABEL[p.kind] || 'Dịch vụ';
+      var imgUrl = p.image || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=600&q=80';
+      var reviewCount = p.reviewCount || (p.reviews && p.reviews.length) || 0;
+      var ratingVal = parseFloat(p.ratingAvg) || 0;
+      var ownerName = p.ownerName || 'Đối tác WanderViệt';
+
+      return `<article class="biz-card">
+        <div class="biz-card__img" style="background-image:url('${imgUrl}')">
+          <div class="biz-card__badges">
+            <span class="badge badge--partner">PARTNER</span>
+            <span class="badge badge--kind">${kindLabel}</span>
+          </div>
+          ${price ? `<div class="biz-card__price-tag">Từ ${price}</div>` : ''}
+        </div>
+        <div class="biz-card__content">
+          <div class="biz-card__owner">${ownerName}</div>
+          <h3 class="biz-card__title">${p.name}</h3>
+          ${p.region || p.address ? `<div class="biz-card__location">${p.region || p.address}</div>` : ''}
+          <div class="biz-card__rating">
+            <span class="stars">${stars(ratingVal)}</span>
+            <span class="rating-num">${ratingVal > 0 ? ratingVal : '—'}</span>
+            <span class="review-cnt">(${reviewCount} đánh giá)</span>
+            <span class="fav-cnt">❤️ ${p.favoritesCount || 0}</span>
+          </div>
+          <div class="biz-card__actions">
+            <button class="btn-biz btn-biz--primary" onclick="openPlaceModal('${p.id}')">🚀 Chi tiết &amp; Đặt lịch</button>
+            <button class="btn-biz btn-biz--outline" onclick="openChatWithBusiness('${p.ownerId}','${p.name.replace(/'/g,'')}')" title="Nhắn tin đối tác">💬</button>
+          </div>
+        </div>
+      </article>`;
+    }
+
+    function getFiltered() {
+      var list = allPlaces.slice();
+      // Filter kind
+      if (currentFilter !== 'all') {
+        list = list.filter(function(p){ return p.kind === currentFilter; });
+      }
+      // Search
+      if (currentSearch) {
+        var q = currentSearch.toLowerCase();
+        list = list.filter(function(p){
+          return (p.name||'').toLowerCase().includes(q)
+              || (p.region||'').toLowerCase().includes(q)
+              || (p.address||'').toLowerCase().includes(q)
+              || (p.ownerName||'').toLowerCase().includes(q);
+        });
+      }
+      // Sort
+      if (currentSort === 'rating') list.sort(function(a,b){ return parseFloat(b.ratingAvg||0) - parseFloat(a.ratingAvg||0); });
+      else if (currentSort === 'price-asc') list.sort(function(a,b){ return (a.priceFrom||0)-(b.priceFrom||0); });
+      else if (currentSort === 'price-desc') list.sort(function(a,b){ return (b.priceFrom||0)-(a.priceFrom||0); });
+      else if (currentSort === 'popular') list.sort(function(a,b){ return (b.favoritesCount||0)-(a.favoritesCount||0); });
+      return list;
+    }
+
+    function renderGrid() {
+      var grid = document.getElementById('biz-services-grid-custom');
+      var meta = document.getElementById('biz-result-meta');
+      if (!grid) return;
+      var list = getFiltered();
+      meta.innerHTML = 'Hiển thị <strong>' + list.length + '</strong> / ' + allPlaces.length + ' dịch vụ đối tác';
+      if (list.length === 0) {
+        grid.innerHTML = '<div class="state-box"><div class="state-icon">🔍</div><h3>Không tìm thấy kết quả</h3><p>Hãy thử từ khóa hoặc bộ lọc khác</p></div>';
+        return;
+      }
+      grid.innerHTML = list.map(renderCard).join('');
+    }
+
+    function loadServices() {
+      var grid = document.getElementById('biz-services-grid-custom');
+      if (!grid) return;
+
+
+      fetch('/api/places')
+        .then(function(r){ return r.json(); })
+        .then(function(json) {
+          if (!json.success || !json.data) throw new Error('API error');
+
+          // Only business-partner places (have ownerId)
+          allPlaces = json.data.filter(function(p){ return p.ownerId; });
+
+          // Update stats
+          var partners = new Set(allPlaces.map(function(p){ return p.ownerId; })).size;
+          var reviews = allPlaces.reduce(function(s,p){ return s + (parseInt(p.reviewCount)||0); }, 0);
+          var sTotal = document.getElementById('stat-total');
+          var sPartners = document.getElementById('stat-partners');
+          var sReviews = document.getElementById('stat-reviews');
+          if (sTotal) sTotal.textContent = allPlaces.length;
+          if (sPartners) sPartners.textContent = partners;
+          if (sReviews) sReviews.textContent = reviews;
+
+          renderGrid();
+        })
+        .catch(function(err) {
+          console.error(err);
+          if (grid) grid.innerHTML = '<div class="state-box"><div class="state-icon">⚠️</div><h3>Lỗi tải dữ liệu</h3><p>Không thể kết nối máy chủ. Vui lòng thử lại sau.</p></div>';
+        });
+    }
+
+    // ── Wire up filters & search ───────────────────────
+    document.addEventListener('DOMContentLoaded', function() {
+      // Filter chips
+      document.querySelectorAll('.filter-chip').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.filter-chip').forEach(function(b){ b.classList.remove('active'); });
+          btn.classList.add('active');
+          currentFilter = btn.dataset.filter;
+          renderGrid();
+        });
+      });
+
+      // Sort
+      var sortEl = document.getElementById('biz-sort');
+      if (sortEl) sortEl.addEventListener('change', function() {
+        currentSort = sortEl.value;
+        renderGrid();
+      });
+
+      // Search
+      var searchEl = document.getElementById('biz-search');
+      if (searchEl) searchEl.addEventListener('input', function() {
+        currentSearch = searchEl.value.trim();
+        renderGrid();
+      });
+
+      loadServices();
+    });
+  })();
+  </script>
+</body>
+</html>

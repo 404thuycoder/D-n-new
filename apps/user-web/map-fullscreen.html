@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bản Đồ Chỉ Đường - Toàn Màn Hình</title>
+
+    <!-- Thư viện giao diện Bản Đồ (Leaflet CSS) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v=1776819067181" crossorigin=""/>
+
+    <style>
+        /* CSS Reset cơ bản để map tràn toàn màn hình */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* Chặn cuộn trang */
+        }
+
+        /* Vùng chứa bản đồ chiếm 100% diện tích */
+        #map {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1; /* Nằm dưới cùng */
+        }
+
+        /* Bảng điều khiển nổi lên trên bản đồ (Floating Box) */
+        .search-box {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 999; /* Phải nổi lên trên nền bản đồ */
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            width: 320px;
+            backdrop-filter: blur(5px);
+        }
+
+        .search-box h3 { margin: 0 0 15px 0; color: #1e293b; font-size: 1.2rem; text-align: center; }
+
+        .input-group { margin-bottom: 15px; }
+        .input-group label { display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 5px; font-weight: bold; }
+        .input-group input { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 6px; 
+            box-sizing: border-box; 
+            font-size: 0.95rem; 
+        }
+
+        /* Lựa chọn phương tiện */
+        .transport-modes { display: flex; gap: 5px; justify-content: space-between; margin-bottom: 15px; }
+        .transport-modes label { 
+            flex: 1; 
+            text-align: center; 
+            background: #f1f5f9; 
+            padding: 8px 5px; 
+            border-radius: 6px; 
+            font-size: 0.85rem; 
+            cursor: pointer; 
+            border: 1px solid transparent; 
+            transition: 0.2s; 
+        }
+        .transport-modes input[type="radio"] { display: none; }
+        /* Tích chọn (Checked state) sành điệu */
+        .transport-modes input[type="radio"]:checked + span { color: #2563eb; font-weight: bold; }
+        .transport-modes label:has(input[type="radio"]:checked) { border: 1px solid #2563eb; background: #eff6ff; }
+
+        /* Các nút bấm */
+        .btn-group { display: flex; flex-direction: column; gap: 10px; }
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+        }
+        .btn-primary { background: #2563eb; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        
+        .btn-secondary { background: #10b981; color: white; margin-top: 5px; }
+        .btn-secondary:hover { background: #059669; }
+
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+
+        /* Khu vực hiển thị thông tin */
+        #route-info {
+            display: none;
+            margin-top: 15px;
+            padding: 12px;
+            background: #dcfce7;
+            border-left: 4px solid #16a34a;
+            border-radius: 4px;
+            color: #166534;
+            font-size: 0.9rem;
+        }
+        #status-msg { margin-top: 10px; font-size: 0.85rem; color: #b91c1c; font-weight: bold; text-align: center; }
+
+        /* Custom marker CSS */
+        .pulse-marker {
+            background-color: #3b82f6;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(59, 130, 246, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Khung Bản Đồ Toàn Màn Hình -->
+    <div id="map"></div>
+
+    <!-- Hộp Nhập Liệu Trôi Nổi (Floating Search Box) -->
+    <div class="search-box">
+        <h3>📍 Chỉ đường Thông Minh</h3>
+
+        <div class="input-group">
+            <label>Vị trí của bạn (Tự động quét):</label>
+            <input type="text" id="origin-input" placeholder="Đang tìm vị trí hiện tại..." readonly style="background:#e2e8f0; border:none; color:#475569;" />
+        </div>
+
+        <div class="input-group">
+            <label>Điểm Đến mong muốn:</label>
+            <input type="text" id="dest-input" placeholder="VD: Lăng Bác, Hà Nội" />
+        </div>
+
+        <!-- Chọn Phương Tiện -->
+        <label style="display:block; font-size:0.85rem; color:#64748b; margin-bottom:5px; font-weight:bold;">Phương tiện di chuyển:</label>
+        <div class="transport-modes">
+            <label><input type="radio" name="mode" value="driving" checked> <span>🚗 Ô tô/Xe máy</span></label>
+            <label><input type="radio" name="mode" value="walking"> <span>🚶 Đi bộ</span></label>
+            <label><input type="radio" name="mode" value="cycling"> <span>🚴 Xe đạp</span></label>
+        </div>
+
+        <!-- Nút Tương Tác -->
+        <div class="btn-group">
+            <button class="btn-primary" onclick="calculateRoute()">🔍 Tìm Đường Đi</button>
+            <button class="btn-secondary" onclick="centerToMyLocation()">🎯 Focus vào Tọa độ của tôi</button>
+            <button class="btn-danger" id="reset-btn" style="display: none;" onclick="resetMap()">🗑️ Xóa Lộ Trình (Reset)</button>
+        </div>
+
+        <div id="status-msg"></div>
+
+        <div id="route-info">
+            <strong>Khoảng cách:</strong> <span id="dist-val">0 km</span><br/>
+            <strong>Thời gian ETA:</strong> <span id="time-val">0 phút</span>
+        </div>
+    </div>
+
+
+    <!-- 2. Nạp Thư viện Bản đồ Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v=1776819067181" crossorigin=""></script>
+
+    <!-- MÃ ĐIỀU KHIỂN CHÍNH (LOGIC APP) -->
+    <script>
+        // ==========================================
+        // 1. KHỞI TẠO BẢN ĐỒ
+        // ==========================================
+        
+        // Tạo map và set tâm mặc định vào Hà Nội, độ zoom 6 (để thấy toàn quốc)
+        let map = L.map('map', { zoomControl: false }).setView([21.0285, 105.8542], 6);
+
+        // Thêm nút zoom xuống góc phải dưới (cho đỡ vướng nút search)
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+        // Nguồn dữ liệu bản đồ: OpenStreetMap (Có bản quyền đầy đủ, miễn phí)
+        // Dữ liệu OSM quốc tế mặc định ghi nhận đầy đủ Quần đảo Hoàng Sa, Trường Sa của Việt Nam
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors | Dữ liệu bao trùm lãnh thổ VN'
+        }).addTo(map);
+
+        // Các biến toàn cục
+        let myCurrentLat = null;
+        let myCurrentLon = null;
+        let watchId = null; // Quản lý ID quét vị trí thời gian thực
+
+        let myMarker = null;       // Đinh ghim vị trí "Tôi"
+        let targetMarker = null;   // Đinh ghim điểm "Đến"
+        let routePolyline = null;  // Đường màu xanh vẽ trên bản đồ
+
+        // Icon chấm xanh nước biển (Pulse radar) cho vị trí của tôi
+        const userIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div class="pulse-marker"></div>',
+            iconSize: [15, 15],
+            iconAnchor: [7.5, 7.5]
+        });
+
+        // ==========================================
+        // 2. LẤY VỊ TRÍ THEO THỜI GIAN THỰC (AUTO TRACKING)
+        // ==========================================
+        
+        function startTrackingLocation() {
+            if (!navigator.geolocation) {
+                document.getElementById('status-msg').innerText = "Trình duyệt không hỗ trợ Geolocation (Định vị).";
+                return;
+            }
+
+            let isFirstLoad = true;
+
+            // Lệnh watchPosition: Tự động chạy lại hàm mỗi khi người dùng di chuyển sang tọa độ mới
+            watchId = navigator.geolocation.watchPosition(
+                (position) => {
+                    myCurrentLat = position.coords.latitude;
+                    myCurrentLon = position.coords.longitude;
+
+                    // Nếu là lần đầu mở trang, tự động di chuyển bản đồ (focus) vào vị trí của tôi
+                    if (isFirstLoad) {
+                        isFirstLoad = false;
+                        document.getElementById('origin-input').value = `Đã lấy vị trí GPS thành công ✔`;
+                        map.setView([myCurrentLat, myCurrentLon], 15); // Zoom vào gẩn
+                    }
+
+                    // Cập nhật vị trí cái Đinh ghim trên bản đồ liên tục
+                    if (!myMarker) {
+                        myMarker = L.marker([myCurrentLat, myCurrentLon], {icon: userIcon, zIndexOffset: 1000})
+                            .addTo(map)
+                            .bindPopup("Vị trí hiện tại của bạn");
+                    } else {
+                        myMarker.setLatLng([myCurrentLat, myCurrentLon]);
+                    }
+                },
+                (error) => {
+                    let errMsg = "Bị từ chối quyền truy cập Vị trí.";
+                    if (window.location.protocol === 'http:' && window.location.hostname !== 'localhost') {
+                        errMsg += " (Bắt buộc dùng HTTPS thay vì HTTP)";
+                    }
+                    document.getElementById('status-msg').innerText = "❌ Lỗi: " + errMsg;
+                    document.getElementById('origin-input').value = "Trình duyệt chặn lấy vị trí!";
+                },
+                { enableHighAccuracy: true, maximumAge: 0 } // Yêu cầu GPS độ nhạy cao nhất
+            );
+        }
+
+        // Bắt đầu chạy quét GPS ngay khi vừa load web xong
+        window.onload = startTrackingLocation;
+
+        // Xử lý nút "Focus vị trí của tôi"
+        function centerToMyLocation() {
+            if (myCurrentLat && myCurrentLon) {
+                map.flyTo([myCurrentLat, myCurrentLon], 16, { duration: 1 });
+            } else {
+                alert("Hệ thống chưa quét được vị trí của bạn. Hãy bật GPS.");
+            }
+        }
+
+
+        // ==========================================
+        // 3. XỬ LÝ TÌM ĐƯỜNG VÀ VẼ LÊN BẢN ĐỒ
+        // ==========================================
+        
+        async function calculateRoute() {
+            const destText = document.getElementById('dest-input').value.trim();
+            const statusBox = document.getElementById('status-msg');
+            
+            if (!myCurrentLat || !myCurrentLon) {
+                statusBox.innerText = "❌ Chưa có tọa độ bắt đầu. Hãy chờ GPS xác nhận vị trí hoặc cấp quyền.";
+                return;
+            }
+            if (!destText) {
+                statusBox.innerText = "❌ Bạn chưa nhập mục đích đến kìa!";
+                return;
+            }
+
+            // Xóa lỗi đang hiện
+            statusBox.innerText = "Đang tra cứu dữ liệu địa điểm...";
+            document.getElementById('route-info').style.display = 'none';
+
+            try {
+                // A) Đổi chữ của người dùng thành Tọa độ (API Nominatim - Miễn phí)
+                const textToCoordUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destText + ', Vietnam')}&limit=1`;
+                const addressFetch = await fetch(textToCoordUrl);
+                const addressData = await addressFetch.json();
+
+                if (!addressData || addressData.length === 0) {
+                    statusBox.innerText = "❌ Không tìm thấy vùng đất này trên bản đồ. Gõ có dấu xem sao nhé.";
+                    return;
+                }
+
+                const targetLat = parseFloat(addressData[0].lat);
+                const targetLon = parseFloat(addressData[0].lon);
+
+                // Thả Marker Điểm Đến
+                if (targetMarker) map.removeLayer(targetMarker);
+                targetMarker = L.marker([targetLat, targetLon]).addTo(map).bindPopup("<b>Điểm Đến</b><br/>" + addressData[0].display_name).openPopup();
+
+                // B) Lấy chế độ đi phương tiện nào
+                const mode = document.querySelector('input[name="mode"]:checked').value;
+                statusBox.innerText = "Đang tính toán tuyến đường ngắn nhất...";
+
+                // C) Xin đường đi từ trạm phát sóng định tuyến OpenRouteService / OSRM (Miễn phí)
+                // OSRM: https://router.project-osrm.org/route/v1/{mode}/{lon1},{lat1};{lon2},{lat2}
+                const routeUrl = `https://router.project-osrm.org/route/v1/${mode}/${myCurrentLon},${myCurrentLat};${targetLon},${targetLat}?overview=full&geometries=geojson`;
+                
+                const routeRes = await fetch(routeUrl);
+                const routeJson = await routeRes.json();
+
+                if (routeJson.code !== 'Ok' || routeJson.routes.length === 0) {
+                     statusBox.innerText = "❌ Máy chủ không tìm ra được con đường khả thi nào (Qua sông/biển/đảo...).";
+                     return;
+                }
+
+                // D) Tẩy đường bay cũ và Vẽ đường bay mới lên
+                if (routePolyline) map.removeLayer(routePolyline);
+                
+                routePolyline = L.geoJSON(routeJson.routes[0].geometry, {
+                    style: { color: '#0ea5e9', weight: 6, opacity: 0.9, lineCap: 'round', lineJoin: 'round' }
+                }).addTo(map);
+
+                // Zoom sao cho vừa khung nhìn từ A đến B
+                map.fitBounds(routePolyline.getBounds(), { padding: [50, 50] });
+
+                // E) Show kết quả Khoảng cách, Thời gian
+                const totalDistKm = (routeJson.routes[0].distance / 1000).toFixed(1);
+                const rawMins = Math.round(routeJson.routes[0].duration / 60);
+
+                // Format ra giờ nếu thời gian lớn hơn 60 p
+                let timeText = rawMins + " phút";
+                if (rawMins > 60) {
+                    timeText = Math.floor(rawMins / 60) + " giờ " + (rawMins % 60) + " phút";
+                }
+
+                document.getElementById('dist-val').innerText = totalDistKm + " km";
+                document.getElementById('time-val').innerText = timeText;
+                
+                document.getElementById('route-info').style.display = 'block';
+                document.getElementById('reset-btn').style.display = 'block';
+                statusBox.innerText = ""; // Dọn sạch lỗi
+
+            } catch (error) {
+                console.error("Lỗi App:", error);
+                // Do SV chạy trên môi trường có thiết lập mạng khắt khe (hoặc nghẽn mạng) sẽ nhảy lỗi Fetch.
+                statusBox.innerText = `❌ Lỗi Hệ Thống: Không thể tải. Kiểm tra mạng hoặc Adblock! Chi tiết: ${error.message}`;
+            }
+        }
+
+        // ==========================================
+        // 4. RESET BẢN ĐỒ
+        // ==========================================
+        function resetMap() {
+            // Xóa đường và Marker điểm đến
+            if (routePolyline) map.removeLayer(routePolyline);
+            if (targetMarker) map.removeLayer(targetMarker);
+            
+            // Xóa input
+            document.getElementById('dest-input').value = "";
+            document.getElementById('route-info').style.display = 'none';
+            document.getElementById('status-msg').innerText = "Đã dọn dẹp bản đồ.";
+            document.getElementById('reset-btn').style.display = 'none';
+
+            // Đưa lại tiêu điểm về vị trí của tôi
+            centerToMyLocation();
+        }
+
+    </script>
+</body>
+</html>

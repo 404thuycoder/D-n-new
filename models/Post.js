@@ -1,0 +1,34 @@
+const mongoose = require('mongoose');
+
+const postSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+  userName: String,
+  userAvatar: String,
+  
+  content: { type: String, required: true },
+  media: [{
+    url: String,
+    type: { type: String, enum: ['image', 'video'], default: 'image' }
+  }],
+  
+  location: {
+    name: String,
+    placeId: mongoose.Schema.Types.ObjectId // Nếu gắn thẻ địa điểm du lịch
+  },
+  
+  likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  comments: [{
+    userId: mongoose.Schema.Types.ObjectId,
+    userName: String,
+    userAvatar: String,
+    text: String,
+    createdAt: { type: Date, default: Date.now }
+  }],
+  
+  isPublic: { type: Boolean, default: true },
+  createdAt: { type: Date, default: Date.now }
+});
+
+postSchema.index({ createdAt: -1 });
+
+module.exports = mongoose.model('Post', postSchema);

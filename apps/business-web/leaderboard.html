@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leaderboard — WanderViệt Partner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      color: #f1f5f9;
+      padding: 2.5rem 1.5rem;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    .lb-header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+    .lb-header .trophy {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 0.5rem;
+      filter: drop-shadow(0 0 16px rgba(234,179,8,0.7));
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.08); }
+    }
+    .lb-header h1 {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      background: linear-gradient(90deg, #fde68a, #f59e0b, #fde68a);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .lb-header p {
+      color: #64748b;
+      font-size: 0.9rem;
+      margin-top: 0.4rem;
+    }
+
+    /* ── Back link ───────────────────────────── */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.85rem;
+      margin-bottom: 2rem;
+      transition: color 0.2s;
+    }
+    .back-link:hover { color: #f1f5f9; }
+
+    /* ── List ────────────────────────────────── */
+    .lb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* ── Item ────────────────────────────────── */
+    .lb-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px;
+      cursor: default;
+      transition: transform 0.2s cubic-bezier(.4,0,.2,1),
+                  box-shadow  0.2s cubic-bezier(.4,0,.2,1),
+                  background  0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .lb-item::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.03) 100%);
+      pointer-events: none;
+    }
+    .lb-item:hover {
+      transform: translateX(6px);
+      background: rgba(255,255,255,0.08);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    /* Top-3 highlights */
+    .lb-item.top-1 {
+      background: linear-gradient(135deg, rgba(234,179,8,0.18) 0%, rgba(251,191,36,0.06) 100%);
+      border-color: rgba(234,179,8,0.4);
+      box-shadow: 0 0 20px rgba(234,179,8,0.12);
+    }
+    .lb-item.top-1:hover { box-shadow: 0 8px 28px rgba(234,179,8,0.25); }
+
+    .lb-item.top-2 {
+      background: linear-gradient(135deg, rgba(148,163,184,0.18) 0%, rgba(203,213,225,0.06) 100%);
+      border-color: rgba(148,163,184,0.35);
+    }
+    .lb-item.top-3 {
+      background: linear-gradient(135deg, rgba(180,83,9,0.18) 0%, rgba(217,119,6,0.06) 100%);
+      border-color: rgba(217,119,6,0.35);
+    }
+
+    /* ── Rank number ─────────────────────────── */
+    .lb-rank {
+      min-width: 2.2rem;
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 900;
+      color: #475569;
+    }
+    .lb-item.top-1 .lb-rank { font-size: 1.5rem; color: #fbbf24; text-shadow: 0 0 10px rgba(251,191,36,0.6); }
+    .lb-item.top-2 .lb-rank { font-size: 1.3rem; color: #94a3b8; }
+    .lb-item.top-3 .lb-rank { font-size: 1.2rem; color: #d97706; }
+
+    /* ── Avatar ──────────────────────────────── */
+    .lb-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #1e293b;
+      border: 2px solid rgba(255,255,255,0.08);
+    }
+    .lb-item.top-1 .lb-avatar { border-color: rgba(234,179,8,0.6); box-shadow: 0 0 10px rgba(234,179,8,0.3); }
+    .lb-item.top-2 .lb-avatar { border-color: rgba(148,163,184,0.5); }
+    .lb-item.top-3 .lb-avatar { border-color: rgba(217,119,6,0.5); }
+
+    /* ── Info ────────────────────────────────── */
+    .lb-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .lb-name {
+      font-weight: 700;
+      font-size: 0.98rem;
+      color: #f1f5f9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .lb-item.top-1 .lb-name { font-size: 1.1rem; }
+    .lb-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .lb-location {
+      font-size: 0.78rem;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Rank badge ──────────────────────────── */
+    .rank-badge {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 99px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .rank-diamond  { background: rgba(59,130,246,0.2); color: #60a5fa; border: 1px solid rgba(59,130,246,0.35); box-shadow: 0 0 8px rgba(59,130,246,0.3); }
+    .rank-platinum { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
+    .rank-gold     { background: rgba(234,179,8,0.15); color: #fbbf24; border: 1px solid rgba(234,179,8,0.3); }
+    .rank-silver   { background: rgba(148,163,184,0.15); color: #94a3b8; border: 1px solid rgba(148,163,184,0.25); }
+    .rank-bronze   { background: rgba(180,83,9,0.15); color: #fb923c; border: 1px solid rgba(180,83,9,0.3); }
+
+    /* ── Score ───────────────────────────────── */
+    .lb-score {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .lb-score-num {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #f1f5f9;
+      line-height: 1;
+    }
+    .lb-item.top-1 .lb-score-num { color: #fbbf24; font-size: 1.4rem; }
+    .lb-score-label {
+      font-size: 0.7rem;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-top: 2px;
+    }
+
+    /* ── Divider between top3 and rest ──────── */
+    .lb-divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      max-width: 680px;
+      margin: 0.75rem auto;
+    }
+    .lb-divider hr { flex: 1; border: none; border-top: 1px solid rgba(255,255,255,0.07); }
+    .lb-divider span { font-size: 0.72rem; color: #334155; white-space: nowrap; }
+
+    /* ── Empty state ─────────────────────────── */
+    .lb-empty {
+      text-align: center;
+      padding: 3rem;
+      color: #334155;
+    }
+  </style>
+</head>
+<body>
+
+  <a class="back-link" href="results.html">← Quay lại kết quả</a>
+
+  <div class="lb-header">
+    <span class="trophy">🏆</span>
+    <h1>Bảng Xếp Hạng</h1>
+    <p>Doanh nghiệp nổi bật nhất trên WanderViệt</p>
+  </div>
+
+  <div class="lb-list" id="lbList"></div>
+
+  <script>
+    var DEFAULT_IMG = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=120&q=80';
+
+    // 1. Lấy & tính điểm
+    var businesses = [];
+    try {
+      var stored = localStorage.getItem('businesses');
+      if (stored) businesses = JSON.parse(stored);
+    } catch(e) {}
+
+    businesses.forEach(function(biz) {
+      biz._score = (Number(biz.views)||0)*1 + (Number(biz.bookings)||0)*5 + (parseFloat(biz.rating)||0)*20;
+    });
+
+    // 2. Sắp xếp giảm dần
+    businesses.sort(function(a, b) { return b._score - a._score; });
+
+    // 3. Render
+    var listEl = document.getElementById('lbList');
+
+    if (!businesses.length) {
+      listEl.innerHTML = '<div class="lb-empty">Chưa có dữ liệu doanh nghiệp.</div>';
+    } else {
+      businesses.forEach(function(biz, idx) {
+        var score = biz._score;
+
+        // Rank class
+        var rankLabel, rankClass, rankIcon;
+        if      (score >= 500) { rankLabel='Diamond';  rankClass='rank-diamond';  rankIcon='💎'; }
+        else if (score >= 200) { rankLabel='Platinum'; rankClass='rank-platinum'; rankIcon='🌟'; }
+        else if (score >= 100) { rankLabel='Gold';     rankClass='rank-gold';     rankIcon='🥇'; }
+        else if (score >= 40)  { rankLabel='Silver';   rankClass='rank-silver';   rankIcon='🥈'; }
+        else                   { rankLabel='Bronze';   rankClass='rank-bronze';   rankIcon='🥉'; }
+
+        // Position prefix
+        var posIcon = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '#' + (idx + 1);
+        var topClass = idx === 0 ? 'top-1' : idx === 1 ? 'top-2' : idx === 2 ? 'top-3' : '';
+
+        // Insert divider after top-3
+        if (idx === 3) {
+          listEl.insertAdjacentHTML('beforeend',
+            '<div class="lb-divider"><hr/><span>Các doanh nghiệp khác</span><hr/></div>'
+          );
+        }
+
+        var item = document.createElement('div');
+        item.className = 'lb-item ' + topClass;
+        item.innerHTML =
+          '<div class="lb-rank">' + posIcon + '</div>' +
+          '<img class="lb-avatar"' +
+            ' src="' + (biz.image || DEFAULT_IMG) + '"' +
+            ' alt="' + (biz.name || '') + '"' +
+            ' onerror="this.onerror=null;this.src=\'' + DEFAULT_IMG + '\';">' +
+          '<div class="lb-info">' +
+            '<div class="lb-name">' + (biz.name || '—') + '</div>' +
+            '<div class="lb-meta">' +
+              '<span class="lb-location">📍 ' + (biz.location || '—') + '</span>' +
+              '<span class="rank-badge ' + rankClass + '">' + rankIcon + ' ' + rankLabel + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="lb-score">' +
+            '<div class="lb-score-num">' + Math.round(score) + '</div>' +
+            '<div class="lb-score-label">Score</div>' +
+          '</div>';
+
+        listEl.appendChild(item);
+      });
+    }
+  </script>
+</body>
+</html>

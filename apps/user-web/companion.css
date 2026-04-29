@@ -1,0 +1,141 @@
+/* Companion Mode & Voice Visualizer Styles */
+
+:root {
+  --voice-primary: #4c82f0;
+  --voice-bg: rgba(15, 23, 42, 0.95);
+}
+
+/* FAB Enhancements */
+.companion-fab {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 64px;
+  height: 64px;
+  background: var(--voice-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(76, 130, 240, 0.4);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  border: none;
+}
+
+.companion-fab:hover {
+  transform: scale(1.1) translateY(-4px);
+}
+
+.companion-fab.is-active {
+  background: #ef4444; /* Red for active mode */
+  box-shadow: 0 8px 32px rgba(239, 68, 68, 0.4);
+}
+
+.companion-fab .mic-icon {
+  font-size: 28px;
+  z-index: 2;
+}
+
+/* Pulse Rings */
+.pulse-rings {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.6;
+  z-index: 1;
+  display: none;
+}
+
+.companion-fab.is-listening .pulse-rings {
+  display: block;
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+/* Voice Overlay at Bottom */
+#voice-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 2rem 1rem;
+  background: linear-gradient(to top, var(--voice-bg), transparent);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  z-index: 999;
+  transform: translateY(100%);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+#voice-overlay.is-visible {
+  transform: translateY(0);
+}
+
+/* Waveform Animation */
+.waveform {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+}
+
+.waveform .bar {
+  width: 4px;
+  height: 10px;
+  background: var(--voice-primary);
+  border-radius: 2px;
+  animation: wave 1s ease-in-out infinite;
+}
+
+#voice-overlay.is-listening .waveform .bar {
+  background: #10b981; /* Green when listening */
+}
+
+#voice-overlay.is-thinking .waveform .bar {
+  background: #f59e0b; /* Yellow when AI thinks */
+  animation: wave-thinking 0.6s ease-in-out infinite;
+}
+
+.bar:nth-child(1) { animation-delay: 0.1s; }
+.bar:nth-child(2) { animation-delay: 0.2s; }
+.bar:nth-child(3) { animation-delay: 0.3s; }
+.bar:nth-child(4) { animation-delay: 0.4s; }
+.bar:nth-child(5) { animation-delay: 0.5s; }
+
+@keyframes wave {
+  0%, 100% { height: 10px; }
+  50% { height: 35px; }
+}
+
+@keyframes wave-thinking {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Live Caption styling */
+#live-caption {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 500;
+  text-align: center;
+  max-width: 800px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  opacity: 0.9;
+  min-height: 1.5em;
+}
+
+.voice-overlay-hidden {
+  display: none !important;
+}

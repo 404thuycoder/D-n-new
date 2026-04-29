@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="description" content="Chỉ đường GPS chính xác cao — WanderViệt." />
+  <title>WanderViệt — Chỉ đường AR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css?v=1776819067182"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="navigator.css?v=1776819067182" />
+  <link rel="stylesheet" href="companion.css?v=1776819067182" />
+</head>
+
+<body>
+  <div class="app-layout">
+    <!-- Sidebar trái (1/3): Chức năng, thông số -->
+    <aside class="sidebar-left">
+      <div class="sidebar-header">
+        <div class="logo-mini">Wander<span>Việt</span></div>
+        <a href="index.html" class="back-btn-mini">✕</a>
+      </div>
+
+      <div class="sidebar-scroll">
+        <!-- Banner hành trình (Tích hợp trong sidebar) -->
+        <div id="itinerary-banner" class="sidebar-card glass-panel" hidden>
+          <div class="card-header">
+            <span id="itinerary-progress">🧭 Điểm 1/X</span>
+            <div class="weather-indicator" id="dest-weather">
+              <span>☀️</span> <span id="dest-temp">24°C</span>
+            </div>
+          </div>
+          <h2 id="itinerary-current-target" class="card-title">Đang tới: ...</h2>
+          
+          <div id="integrated-instruction" class="integrated-instruction-sidebar" style="display: none;">
+            <span id="integrated-icon">⬆️</span>
+            <div class="instruction-body">
+              <span id="integrated-text">Tiếp tục di chuyển</span>
+              <span id="integrated-dist">-- m</span>
+            </div>
+          </div>
+          <p id="itinerary-next-target" class="card-next">Tiếp: ...</p>
+          <button id="itinerary-skip-btn" class="btn btn--small" hidden>Bỏ qua</button>
+        </div>
+
+        <!-- Tìm kiếm (Sidebar version) -->
+        <div id="target-selector" class="sidebar-search">
+          <div class="search-title">📍 Địa điểm tham quan</div>
+          <div class="search-box-sidebar">
+            <input type="text" id="target-input" placeholder="Địa điểm hành trình" readonly style="cursor: default; background: rgba(0,0,0,0.02);" />
+          </div>
+          <ul id="autocomplete-list" class="autocomplete-list-sidebar" hidden></ul>
+          
+          <div class="quick-targets-sidebar" id="quick-targets-row">
+            <button class="chip" data-lat="21.028511" data-lng="105.804817">Hà Nội</button>
+            <button class="chip" data-lat="16.054407" data-lng="108.202167">Đà Nẵng</button>
+          </div>
+        </div>
+
+        <!-- BẢNG SO SÁNH PHƯƠNG TIỆN -->
+        <div id="transport-compare-panel" class="transport-compare-panel" style="display:none;">
+          <div class="section-title">🧭 So sánh phương tiện</div>
+          <div id="compare-route-label" class="route-label-sidebar">-- km · Điểm đến</div>
+          <div class="compare-cards-vertical" id="compare-cards">
+            <!-- Render bởi JS -->
+          </div>
+          <div class="compare-recommendation" id="compare-recommendation" style="display:none;">
+            <span class="rec-icon">✅</span>
+            <span id="rec-text" style="font-size: 0.85rem;">Đề xuất: ...</span>
+          </div>
+        </div>
+
+        <!-- Thống kê hành trình -->
+        <div class="stats-panel" id="nav-stats" style="display: none;">
+          <div class="section-title">📊 Thông số hiện tại</div>
+          <div class="stats-grid-sidebar">
+            <div class="stat-item">
+              <span class="stat-label"><i class="fas fa-route" style="margin-right: 6px; color: #3b82f6;"></i>Khoảng cách</span>
+              <span id="dtg-value" class="stat-val">-- km</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label"><i class="fas fa-stopwatch" style="margin-right: 6px; color: #f59e0b;"></i>Thời gian đã đi</span>
+              <span id="eta-value" class="stat-val">0 phút</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label"><i class="fas fa-tachometer-alt" style="margin-right: 6px; color: #10b981;"></i>Tốc độ</span>
+              <span id="speed-value" class="stat-val">0 km/h</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div id="status-text" class="status-msg">Chờ tín hiệu GPS...</div>
+        <div class="sidebar-actions">
+          <div id="companion-toggle" class="mic-fab-sidebar" title="Trợ lý WanderViệt">
+            🎙️
+            <div class="pulse-rings"></div>
+          </div>
+          <div class="main-buttons">
+            <div class="button-row">
+              <button id="start-nav-btn" class="btn btn--primary" hidden><i class="fas fa-rocket"></i> BẮT ĐẦU</button>
+              <button id="pause-nav-btn" class="btn btn--warning" hidden disabled><i class="fas fa-pause"></i> TẠM DỪNG</button>
+            </div>
+            <button id="exit-nav-btn" class="btn btn--danger btn-full" style="margin-top: 10px;" hidden><i class="fas fa-door-open"></i> THOÁT</button>
+            <button id="arrived-btn" class="btn btn--success btn-full" style="margin-top: 10px;" hidden><i class="fas fa-check-circle"></i> ĐẾN NƠI</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Map Area (2/3): Bản đồ và các nút định tâm -->
+    <main class="map-area-right">
+      <div id="nav-map"></div>
+
+      <!-- Floating Map Controls -->
+      <div class="map-controls-premium">
+        <button id="recenter-btn" class="map-fab-main" title="Định tâm">🎯</button>
+        
+        <div class="map-side-group">
+          <button class="map-side-btn" id="map-style-toggle-custom" title="Vệ tinh">🗺️</button>
+          <div class="side-divider"></div>
+          <button class="map-side-btn" id="traffic-toggle" title="Giao thông">🚦</button>
+          <button class="map-side-btn" onclick="window.quickSearch('fuel')" title="Xăng">⛽</button>
+          <button class="map-side-btn" onclick="window.quickSearch('restaurant')" title="Ăn uống">🍲</button>
+          <button class="map-side-btn" onclick="window.quickSearch('hotel')" title="Khách sạn">🏨</button>
+          <div class="side-divider"></div>
+          <button class="map-side-btn" onclick="window.quickSearch('hospital')" title="Cấp cứu/Y tế">🆘</button>
+        </div>
+      </div>
+
+      <!-- GPS Loading Overlay - Premium Radar Effect -->
+      <div id="gps-loading-overlay" class="gps-loading-overlay-premium">
+        <div class="radar-wrap">
+          <div class="radar-pulse"></div>
+          <div class="radar-pulse"></div>
+          <div class="radar-pulse"></div>
+          <div class="radar-core">🛰️</div>
+        </div>
+        <div class="loading-text-wrap">
+          <p class="loading-main-text">Đang kết nối vệ tinh...</p>
+          <div class="loading-bar-wrap">
+            <div class="loading-bar-fill"></div>
+          </div>
+          <small class="loading-sub-text">Vui lòng đứng ở nơi thoáng đãng để nhận tín hiệu GPS tốt nhất</small>
+        </div>
+      </div>
+
+      <!-- Voice Overlay (Floating over map) -->
+      <div id="voice-overlay" class="voice-overlay-hidden">
+        <div class="waveform">
+          <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+        <div id="live-caption">Đang nghe...</div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v=1776819067182"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="voice-helper.js?v=1776819067182"></script>
+  <script src="navigator.js?v=1776819067182"></script>
+  <script>
+    // TRANSPORT COMPARE MODULE
+    window.TransportCompare = (function() {
+      const FUEL_PRICE = 24000;
+      
+      function render(distKm, destName) {
+        const c = document.getElementById('compare-cards');
+        if (!c) return;
+        document.getElementById('compare-route-label').textContent = Math.round(distKm) + ' km · ' + (destName||'Đích');
+        c.innerHTML = '';
+        
+        let modes = [
+          { id: 'motorbike_own', icon: '🏍️', name: 'Xe máy', avgSpeedKmh: 55, fuelLper100km: 3.5, roadNote: 'Linh hoạt' },
+          { id: 'car_own', icon: '🚗', name: 'Ô tô', avgSpeedKmh: 80, fuelLper100km: 12.0, roadNote: 'Thoải mái' },
+          { id: 'bus', icon: '🚌', name: 'Xe khách', avgSpeedKmh: 60, ticketPer100km: 130000, roadNote: 'Giá rẻ' }
+        ];
+
+        // Đề xuất Combo phương tiện (Kết hợp xe)
+        if (distKm > 400) {
+           modes.push({ id: 'airplane_bike', icon: '✈️+🏍️', name: 'Bay & Thuê xe', avgSpeedKmh: 500, customCost: 2200000 + (Math.round(distKm/100)*50000), roadNote: 'Combo Tối ưu' });
+        } else if (distKm > 150) {
+           modes.push({ id: 'bus_bike', icon: '🚌+🏍️', name: 'Xe khách & Thuê xe', avgSpeedKmh: 60, customCost: Math.round((distKm/100)*130000) + 300000, roadNote: 'Đỡ mệt, linh hoạt' });
+        }
+
+        modes.forEach(m => {
+          let cost = m.customCost ? m.customCost : (m.fuelLper100km ? (distKm/100)*m.fuelLper100km*FUEL_PRICE : (distKm/100)*m.ticketPer100km);
+          const timeH = Math.floor(distKm/m.avgSpeedKmh);
+          const timeM = Math.round((distKm/m.avgSpeedKmh)*60) % 60;
+          const timeStr = timeH > 0 ? `${timeH}h${timeM}p` : `${timeM}p`;
+          
+          const div = document.createElement('div');
+          div.className = 'compare-card-sidebar';
+          
+          // Kiểm tra xem phương tiện này có đang được chọn không bằng ID duy nhất
+          if (window.State && window.State.selectedModeId === m.id) {
+            div.classList.add('active-card');
+          }
+
+          if (m.id.includes('_')) div.classList.add('combo-card');
+          
+          div.innerHTML = `<span class="c-icon">${m.icon}</span><div class="c-info"><span class="c-name" style="${m.id.includes('_') ? 'color: var(--primary);' : ''}">${m.name}</span><span class="c-meta">${timeStr} · ~${Math.round(cost/1000)}k</span><span style="font-size: 0.75rem; color: #10b981; font-weight: 500; display: block; margin-top: 2px;">✨ ${m.roadNote}</span></div>`;
+          
+          div.onclick = () => {
+            const isActive = div.classList.contains('active-card');
+            
+            // Xóa tất cả các trạng thái đang chọn
+            document.querySelectorAll('.compare-card-sidebar').forEach(el => el.classList.remove('active-card'));
+            
+            if (isActive) {
+              // Nếu đang chọn mà ấn lại -> Hủy chọn
+              if (window.State) {
+                window.State.routeMode = 'idle';
+                window.State.selectedModeId = null;
+                if (window.State.routeLine) window.State.map.removeLayer(window.State.routeLine);
+                if (window.State.flightSegments) window.State.flightSegments.forEach(s => window.State.map.removeLayer(s));
+                window.State.routeLine = null;
+                window.State.flightSegments = [];
+                if (window.els && window.els.startBtn) window.els.startBtn.hidden = true;
+              }
+              return;
+            }
+
+            let mode = 'car';
+            if (m.id.includes('airplane')) mode = 'airplane';
+            else if (m.id.includes('bike') || m.id.includes('motorbike')) mode = 'motorcycle';
+            
+            if (window.State && window.fetchOSRMRoute) {
+              window.State.routeMode = mode;
+              window.State.selectedModeId = m.id;
+              window.fetchOSRMRoute();
+            }
+            div.classList.add('active-card');
+          };
+          c.appendChild(div);
+        });
+        document.getElementById('transport-compare-panel').style.display = 'block';
+      }
+      document.addEventListener('wanderviet:routeReady', e => {
+        if (e.detail.distanceKm > 0) render(e.detail.distanceKm, e.detail.destName);
+      });
+      return { render };
+    })();
+  </script>
+</body>
+
+</html>

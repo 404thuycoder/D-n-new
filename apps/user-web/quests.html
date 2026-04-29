@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WanderViệt — Nhiệm Vụ & Thành Tựu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="global-tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { 
+      background: var(--bg); 
+      color: var(--text); 
+      font-family: var(--font-sans);
+      padding-top: var(--header-h);
+    }
+
+    .quest-hero {
+      position: relative;
+      padding: 4rem 0;
+      background: var(--bg-elevated);
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .quest-hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 2.5rem);
+      font-weight: 850;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .quest-hero p {
+      font-size: 1rem;
+      color: var(--text-muted);
+      margin: 0 auto;
+    }
+    .quest-hero__capsule {
+      display: inline-flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--bg-card);
+      padding: 0.5rem 1.5rem 0.5rem 0.5rem;
+      border-radius: 50px;
+      border: 1px solid var(--border);
+      margin-top: 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .quest-hero__capsule-badge {
+      background: var(--bg-soft);
+      padding: 0.35rem 0.75rem;
+      border-radius: 50px;
+      font-weight: 800;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+      border: 1px solid var(--border);
+    }
+    .quest-hero__capsule-badge .rank-text {
+      color: var(--text);
+    }
+    .quest-hero__capsule-progress {
+      width: 200px;
+      height: 6px;
+      background: var(--bg-soft);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .quest-hero__capsule-fill {
+      height: 100%;
+      background: #8b5cf6;
+      box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+      transition: width 1s ease;
+    }
+    .quest-hero__capsule-xp {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .quests-main {
+      padding: 4rem 0;
+    }
+
+    .tabs-container {
+      margin-bottom: 3rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .quest-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 500px) {
+      .quest-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .quest-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      gap: 1.5rem;
+      align-items: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      position: relative;
+    }
+
+    .quest-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+    }
+
+    .quest-card.completed {
+      background: #f8fafc;
+      opacity: 0.85;
+    }
+
+    .quest-card__icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.2rem;
+      flex-shrink: 0;
+      box-shadow: inset 0 2px 5px rgba(255,255,255,0.5);
+    }
+
+    .quest-card {
+      background: var(--bg-card);
+      border-radius: 20px;
+      padding: 1.25rem;
+      border: 1px solid var(--border);
+      display: flex;
+      gap: 1.25rem;
+      transition: all 0.3s var(--ease);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .quest-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+    }
+
+    .quest-card.completed {
+      opacity: 0.8;
+    }
+
+    .quest-card__icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+
+    .quest-card__body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .quest-card__title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+
+    .quest-card__desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+
+    .quest-xp-badge-simple {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .xp-val {
+      font-weight: 800;
+      font-size: 1rem;
+      color: #3b82f6;
+    }
+
+    .xp-lbl {
+      font-weight: 700;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-top: -2px;
+    }
+
+    .quest-card__progress-wrap {
+      margin-top: auto;
+    }
+
+    .quest-card__progress-bar {
+      height: 4px;
+      background: var(--bg-soft);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .quest-card__progress-fill {
+      height: 100%;
+      background: var(--primary);
+      transition: width 1s ease;
+    }
+
+    .quest-card__progress-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .quest-progress-text {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .btn-quest-action {
+      padding: 0.4rem 0.9rem;
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      color: var(--text);
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-quest-action:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .btn-quest {
+      padding: 0.6rem 1.25rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      transition: all 0.3s var(--ease);
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-quest--primary {
+      background: linear-gradient(135deg, var(--primary), #059669);
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+
+    .btn-quest--primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+      filter: brightness(1.1);
+    }
+
+    .btn-quest--claimed {
+      background: var(--bg-elevated);
+      color: var(--text-muted);
+      border-color: var(--border);
+      cursor: default;
+    }
+
+    .quest-card__badge-claimed {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--primary);
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .section-divider {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin: 2.5rem 0 1.5rem;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text);
+      text-transform: capitalize;
+    }
+
+    .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+      opacity: 0.5;
+    }
+
+    .btn-quest-action {
+      padding: 0.45rem 1rem;
+      font-size: 0.8rem;
+      border-radius: 8px;
+      font-weight: 700;
+      background: #ffffff;
+      color: #3b82f6;
+      border: 1px solid #bfdbfe;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+
+    .btn-quest-action:hover {
+      background: #eff6ff;
+      border-color: #3b82f6;
+    }
+
+    .section-divider {
+      grid-column: 1 / -1;
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      margin: 2rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .section-divider span {
+      background: var(--bg-elevated);
+      padding: 0.25rem 0.75rem;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      color: var(--primary);
+    }
+
+    .vibrant-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 0.5rem;
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .vibrant-tab {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 0.5rem 1.25rem;
+      border-radius: 20px;
+      transition: all 0.2s ease;
+    }
+
+    .vibrant-tab:hover {
+      color: #ffffff;
+    }
+
+    .vibrant-tab.is-active {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+    }
+
+    .login-lock {
+      text-align: center;
+      padding: 5rem 2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 32px;
+      max-width: 500px;
+      margin: 2rem auto;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .login-lock__icon {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      display: block;
+    }
+
+    .login-lock h2 {
+      font-family: var(--font-display);
+      margin-bottom: 1rem;
+    }
+
+    .login-lock p {
+      color: var(--text-muted);
+      margin-bottom: 2rem;
+    }
+
+  </style>
+</head>
+<body>
+  <header class="site-header" id="header-container"></header>
+
+  <!-- Hero Section -->
+  <section class="quest-hero">
+    <div class="container quest-hero__content">
+      <h1><span style="font-size: 2.2rem; filter: brightness(0.8) hue-rotate(240deg);">⚔️</span> Nhiệm Vụ</h1>
+      <p>Hoàn thành nhiệm vụ để nhận XP và thăng hạng</p>
+      
+      <div id="heroRankMini" class="quest-hero__capsule" style="display:none;">
+        <div id="heroRankName" class="quest-hero__capsule-badge">
+          <!-- Rank badge injected by JS -->
+        </div>
+        <div class="quest-hero__capsule-progress">
+          <div id="heroXpBar" class="quest-hero__capsule-fill" style="width:0%"></div>
+        </div>
+        <span id="heroXpText" class="quest-hero__capsule-xp">0 XP</span>
+      </div>
+    </div>
+  </section>
+
+  <main class="quests-main">
+    <div class="container">
+      <div id="loginWarn" class="login-lock" style="display:none;">
+        <span class="login-lock__icon">🔒</span>
+        <h2>Khu vực dành cho thành viên</h2>
+        <p>Vui lòng đăng nhập để theo dõi tiến độ nhiệm vụ và nhận phần thưởng XP của bạn.</p>
+        <button class="btn btn-primary" data-auth-open>Đăng nhập ngay</button>
+      </div>
+
+      <div id="questsContainer" style="display:none;">
+        <div class="tabs-container">
+          <div class="vibrant-tabs">
+            <button class="vibrant-tab is-active" data-tab="all">Tất cả</button>
+            <button class="vibrant-tab" data-tab="daily">Hàng ngày</button>
+            <button class="vibrant-tab" data-tab="trip">Chuyến đi</button>
+            <button class="vibrant-tab" data-tab="explore">Khám phá</button>
+            <button class="vibrant-tab" data-tab="social">Cộng đồng</button>
+            <button class="vibrant-tab" data-tab="completed">Đã nhận</button>
+          </div>
+        </div>
+
+      <!-- Danh sách nhiệm vụ -->
+      <div id="questGrid" class="quest-grid">
+        <div class="loading-wrap" id="questsLoading">
+          <div class="loading-spinner"></div>
+          <p>Đang chuẩn bị hành trình nhiệm vụ...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .loading-wrap {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 0;
+      color: var(--text-muted);
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--bg-soft);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+  </main>
+
+  <script src="SharedUI.js?v=1777335000000"></script>
+  <script>
+  (function() {
+    var token = localStorage.getItem('wander_token');
+
+    // Hàm ghi nhận hoạt động nhiệm vụ vào localStorage
+    function trackQuestActivity(key, value) {
+      try {
+        var data = JSON.parse(localStorage.getItem('wv_quest_activity') || '{}');
+        data[key] = Math.max(data[key] || 0, value || 1);
+        localStorage.setItem('wv_quest_activity', JSON.stringify(data));
+      } catch(e) {}
+    }
+    function getQuestActivity(key) {
+      try { return JSON.parse(localStorage.getItem('wv_quest_activity') || '{}')[key] || 0; } catch(e) { return 0; }
+    }
+    // Expose để các trang khác dùng
+    window.trackQuestActivity = trackQuestActivity;
+
+    var QUESTS = [
+      // ☀️ Hàng ngày & Ngắn hạn
+      { id:'daily_login',     cat:'daily',   icon:'☀️', title:'Đăng nhập hàng ngày',          desc:'Mở ứng dụng và đăng nhập tài khoản.',                    xp:2,  max:1, key:'dailyLogin',     link:'index.html' },
+      { id:'daily_chat',      cat:'daily',   icon:'💬', title:'Trò chuyện với Trợ lý AI',     desc:'Gửi ít nhất 1 tin nhắn tới Trợ lý WanderViệt.',         xp:3,  max:1, key:'dailyChat',      link:'index.html#chat' },
+      { id:'daily_search',    cat:'daily',   icon:'🔍', title:'Tìm kiếm điểm đến',            desc:'Sử dụng công cụ tìm kiếm thông minh.',                  xp:2,  max:1, key:'dailySearch',    link:'index.html#search' },
+
+      // 🗺️ Chuyến đi – Hành trình của bạn
+      { id:'trip_create_ai',  cat:'trip',    icon:'🤖', title:'Lập lịch trình bằng AI',       desc:'Dùng AI Planner để tạo chuyến đi thông minh.',           xp:5,  max:1, key:'tripCreateAI',   link:'planner.html' },
+      { id:'trip_pro_planner',cat:'trip',    icon:'🧠', title:'Chuyên gia lên lịch',          desc:'Tích lũy 10 lịch trình du lịch thông minh.',            xp:20, max:10, key:'tripCreateAI',   link:'planner.html' },
+      { id:'trip_save',       cat:'trip',    icon:'💾', title:'Lưu chuyến đi',                desc:'Lưu lại lịch trình trong mục Chuyến đi.',               xp:3,  max:1, key:'tripSave',       link:'planner.html' },
+      { id:'trip_complete',   cat:'trip',    icon:'✅', title:'Hoàn thành chuyến đi',         desc:'Đánh dấu "Đã trải nghiệm" cho 1 chuyến đi.',            xp:10, max:1, key:'tripComplete',   link:'my-trips.html' },
+      { id:'trip_veteran',    cat:'trip',    icon:'🎖️', title:'Kẻ lữ hành đại thụ',          desc:'Hoàn thành 5 chuyến đi thực tế.',                       xp:50, max:5, key:'tripComplete',   link:'my-trips.html' },
+
+      // 🔭 Khám phá – Tìm tòi cái mới
+      { id:'explore_favorite',cat:'explore', icon:'❤️', title:'Lưu địa điểm yêu thích',       desc:'Bấm ❤️ để lưu điểm đến vào danh sách.',                xp:3,  max:1, key:'expFavorite',    link:'index.html#destinations' },
+      { id:'explore_collector',cat:'explore',icon:'📚', title:'Nhà sưu tầm địa danh',          desc:'Lưu trữ 10 địa điểm bạn yêu thích nhất.',               xp:20, max:10, key:'expFavorite',    link:'index.html#destinations' },
+      { id:'explore_contact', cat:'explore', icon:'📞', title:'Liên hệ đặt tour',              desc:'Gửi thông tin liên hệ để được tư vấn.',                 xp:4,  max:1, key:'expContact',     link:'index.html#contact' },
+      { id:'explore_offers',  cat:'explore', icon:'🎁', title:'Săn tìm ưu đãi',               desc:'Khám phá các chương trình khuyến mãi.',                  xp:3,  max:1, key:'expOffers',      link:'index.html#offers' },
+
+      // 🌟 Cộng đồng – Kết nối & Chia sẻ
+      { id:'social_avatar',   cat:'social',  icon:'🖼️', title:'Thêm ảnh đại diện',            desc:'Tải lên ảnh hồ sơ của bạn trong phần Cài đặt.',          xp:3,  max:1, key:'socAvatar',      link:'index.html?openSettings=true' },
+      { id:'social_profile',  cat:'social',  icon:'👤', title:'Hoàn thiện hồ sơ',             desc:'Điền tên hiển thị và thông tin cá nhân.',                xp:2,  max:1, key:'socProfile',     link:'index.html?openSettings=true' },
+      { id:'social_board',    cat:'social',  icon:'🏆', title:'Xem bảng xếp hạng',            desc:'Truy cập trang BXH để xem vị trí của bạn.',             xp:2,  max:1, key:'socLeaderboard', link:'leaderboard.html' },
+      { id:'social_influencer',cat:'social', icon:'✍️', title:'Người truyền cảm hứng',        desc:'Viết 5 đánh giá đóng góp cho cộng đồng.',               xp:30, max:5, key:'reviewWrite',     link:'index.html#reviews' }
+    ];
+
+    function renderQuests(filter, userStats, dbClaimedQuests) {
+      var grid = document.getElementById('questGrid');
+      var sections = { daily:'Hàng ngày', trip:'Chuyến đi', explore:'Khám phá', social:'Cộng đồng' };
+      var rendered = {};
+
+      grid.innerHTML = '';
+      QUESTS.forEach(function(q) {
+        var progress = userStats[q.key] || 0;
+        var done = progress >= q.max;
+        
+        // Sync: If DB says it's not claimed, it's not claimed (trust the server)
+        var claimedKey = (window.WanderUI && typeof window.WanderUI.getStoreKey === 'function') ? window.WanderUI.getStoreKey('claimed_quests') : 'wv_claimed_quests';
+        var localClaimed = JSON.parse(localStorage.getItem(claimedKey) || '{}');
+        
+        var isClaimedInDB = (dbClaimedQuests && dbClaimedQuests.indexOf(q.id) !== -1);
+        var isClaimed = isClaimedInDB;
+
+        // Cleanup local storage if it's out of sync with DB
+        if (!isClaimedInDB && localClaimed[q.id]) {
+          delete localClaimed[q.id];
+          localStorage.setItem(claimedKey, JSON.stringify(localClaimed));
+        }
+        
+        if (filter === 'completed') {
+          if (!isClaimed) return;
+        } else {
+          if (isClaimed) return;
+          if (filter !== 'all' && q.cat !== filter) return;
+        }
+
+        var pct = isClaimed ? 100 : Math.min(100, Math.floor((progress / q.max) * 100));
+
+        if (filter === 'all' && !rendered[q.cat]) {
+          rendered[q.cat] = true;
+          var st = document.createElement('div');
+          st.className = 'section-divider';
+          st.innerHTML = '<span style="background:none;color:#fef08a;font-size:1.4rem;">' + (q.cat === 'daily' ? '☀️' : (q.cat === 'trip' ? '🗺️' : (q.cat === 'explore' ? '🔭' : '🌟'))) + '</span> Nhiệm vụ ' + sections[q.cat].toLowerCase();
+          grid.appendChild(st);
+        }
+
+        var card = document.createElement('div');
+        card.className = 'quest-card' + (isClaimed ? ' completed' : '');
+        card.setAttribute('data-quest-id', q.id);
+
+        var actionHtml = '';
+        if (isClaimed) {
+          actionHtml = '<span style="color:#10b981; font-weight:800; font-size:0.85rem">✓ Đã nhận</span>';
+        } else if (done) {
+          actionHtml = '<button class="btn-quest-action btn-claim-main" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="claimQuest(this, \'' + q.id + '\', ' + q.xp + ')">🎁 Nhận</button>';
+        } else if (q.link === '#') {
+          actionHtml = '<button class="btn-quest-action" data-open-profile>🎯 Làm nhiệm vụ</button>';
+        } else {
+          actionHtml = '<a href="' + q.link + '" class="btn-quest-action">🎯 Làm nhiệm vụ</a>';
+        }
+
+        var iconBg = q.cat === 'daily' ? '#fef3c7' : (q.cat === 'trip' ? '#f3e8ff' : '#e0e7ff');
+        var displayProgress = Math.min(progress, q.max);
+        card.innerHTML =
+          '<div class="quest-card__icon" style="background:' + iconBg + '">' + q.icon + '</div>' +
+          '<div class="quest-card__body">' +
+            '<div style="display:flex; justify-content:space-between; align-items:flex-start;">' +
+              '<div>' +
+                '<h3 class="quest-card__title">' + q.title + '</h3>' +
+                '<p class="quest-card__desc">' + q.desc + '</p>' +
+              '</div>' +
+              '<div class="quest-xp-badge-simple">' +
+                '<span class="xp-val">+' + q.xp + '</span>' +
+                '<span class="xp-lbl">XP</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="quest-card__progress-wrap">' +
+              '<div class="quest-card__progress-bar">' +
+                '<div class="quest-card__progress-fill" style="width:' + pct + '%"></div>' +
+              '</div>' +
+              '<div class="quest-card__progress-info">' +
+                '<span class="quest-progress-text">' + displayProgress + ' / ' + q.max + '</span>' +
+                '<div class="quest-action-box">' + actionHtml + '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>';
+        grid.appendChild(card);
+      });
+    }
+
+    function getCalculatedStats(actLog, allTrips, userData) {
+      var expCount = allTrips.filter(function(t) { return t.status === 'completed'; }).length;
+      
+      var wishlist = [];
+      try {
+        wishlist = JSON.parse(localStorage.getItem('wander_wishlist') || '[]');
+      } catch(e) {}
+
+      // Tổng số chuyến đi đã lưu (có userId)
+      var totalTrips = allTrips.length;
+      
+      // Phân biệt chuyến đi AI vs thủ công:
+      // Manual trips: planJson.tripSummary bắt đầu bằng "Lộ trình tự lập"
+      // AI trips: tất cả những chuyến không phải thủ công, hoặc có days > 1
+      var aiTrips = allTrips.filter(function(t) {
+        var summary = (t.planJson && t.planJson.tripSummary) || '';
+        return !summary.startsWith('Lộ trình tự lập');
+      }).length;
+
+      return {
+        dailyLogin:    1,                               // Auto: luôn là 1 khi đã đăng nhập
+        dailyChat:     getQuestActivity('dailyChat'),   // Ghi nhận khi gửi tin nhắn AI
+        dailySearch:   getQuestActivity('dailySearch'), // Ghi nhận khi tìm kiếm
+        tripCreateAI:  aiTrips,                         // Số chuyến đi AI đã tạo
+        tripSave:      totalTrips,                      // Bất kỳ chuyến đi nào đã lưu
+        tripComplete:  expCount,                        // Chuyến đi có status 'experienced'
+        expFavorite:   wishlist.length,                 // Địa điểm yêu thích
+        expContact:    getQuestActivity('expContact'),  // Ghi nhận khi gửi form thành công
+        expOffers:     getQuestActivity('expOffers'),   // Ghi nhận khi xem ưu đãi
+        socAvatar:     (userData && userData.avatar && userData.avatar.length > 0) ? 1 : 0,
+        socProfile:    (userData && (userData.displayName || userData.name)) ? 1 : 0,
+        socLeaderboard:getQuestActivity('socLeaderboard'), // Ghi nhận khi vào trang BXH
+        reviewWrite:   getQuestActivity('reviewWrite')  // Ghi nhận khi viết đánh giá
+      };
+    }
+
+    var globalRankData = null;
+
+    function loadPage() {
+      if (!token) {
+        document.getElementById('loginWarn').style.display = 'block';
+        return;
+      }
+      document.getElementById('questsContainer').style.display = 'block';
+
+      // Load all required data in parallel for maximum speed
+      Promise.all([
+        fetch('/api/auth/user/rank', { headers: { 'x-auth-token': token } }).then(r => r.json()),
+        fetch('/api/auth/user/activity', { headers: { 'x-auth-token': token } }).then(r => r.json()),
+        fetch('/api/planner/my-trips', { headers: { 'x-auth-token': token } }).then(r => r.json())
+      ])
+      .then(function(results) {
+        var rankRes = results[0];
+        var actRes = results[1];
+        var tripsRes = results[2];
+
+        if (rankRes && rankRes.success) {
+          globalRankData = rankRes;
+          var mini = document.getElementById('heroRankMini');
+          mini.style.display = 'inline-flex';
+          
+          document.getElementById('heroRankName').innerHTML = WanderUI.getRankBadgeHTML(rankRes.rank, rankRes.rankTier);
+          document.getElementById('heroXpText').textContent = rankRes.points + ' XP';
+          
+          var thresholds = [0,100,200,300,500,700,1000,1300,1600,2000,2400,2800,3200,3700,4200,5000];
+          var prev = 0;
+          for (var i = 0; i < thresholds.length; i++) {
+            if (rankRes.nextThreshold === thresholds[i]) { prev = thresholds[i-1] || 0; break; }
+          }
+          var pct = rankRes.nextThreshold ? ((rankRes.points - prev) / (rankRes.nextThreshold - prev) * 100) : 100;
+          document.getElementById('heroXpBar').style.width = Math.min(100, Math.max(0, pct)) + '%';
+        }
+
+        var actLog = (actRes && actRes.success ? actRes.activityLog : []) || [];
+        var allTrips = (tripsRes && tripsRes.success ? tripsRes.data : []) || [];
+        
+        if (globalRankData) {
+          var stats = getCalculatedStats(actLog, allTrips, globalRankData);
+          var currentTab = document.querySelector('.vibrant-tab.is-active').getAttribute('data-tab');
+          renderQuests(currentTab, stats, globalRankData.claimedQuests);
+        } else {
+          renderQuests('all', {}, []);
+        }
+      })
+      .catch(function(err) { 
+        console.error("Quests loading error:", err);
+        renderQuests('all', {}, []); 
+      });
+    }
+
+    document.querySelectorAll('.vibrant-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.vibrant-tab').forEach(function(t) { t.classList.remove('is-active'); });
+        tab.classList.add('is-active');
+        loadPage();
+      });
+    });
+
+    window.claimQuest = function(btn, id, xp) {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = 'Đang nhận...';
+      }
+
+      fetch('/api/auth/user/add-xp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ xp: xp, questId: id, reason: 'Hoàn thành nhiệm vụ: ' + id })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(json) {
+        if (json.success) {
+          // 1. Mark as claimed in localStorage
+          var claimedKey = (window.WanderUI && typeof window.WanderUI.getStoreKey === 'function') ? window.WanderUI.getStoreKey('claimed_quests') : 'wv_claimed_quests';
+          var claimed = JSON.parse(localStorage.getItem(claimedKey) || '{}');
+          claimed[id] = true;
+          localStorage.setItem(claimedKey, JSON.stringify(claimed));
+
+          // 2. Instantly update UI numbers if present in JSON response
+          if (json.points !== undefined) {
+            document.getElementById('heroRankName').innerHTML = WanderUI.getRankBadgeHTML(json.rank, json.rankTier);
+            document.getElementById('heroXpText').textContent = json.points + ' XP';
+            var headerRankEl = document.getElementById('header-user-rank');
+            if (headerRankEl) headerRankEl.title = json.rank + ' (' + json.points + ' XP)';
+          }
+
+          // 3. Instant Dynamic Feedback (Linh hoạt)
+          var currentTab = document.querySelector('.vibrant-tab.is-active').getAttribute('data-tab');
+          var targetCard = document.querySelector('.quest-card[data-quest-id="' + id + '"]');
+          
+          if (targetCard) {
+            if (currentTab !== 'completed') {
+              // Fade out and remove if not in 'completed' tab
+              targetCard.style.transition = 'all 0.5s ease';
+              targetCard.style.opacity = '0';
+              targetCard.style.transform = 'scale(0.95)';
+              setTimeout(function() { targetCard.remove(); }, 500);
+            } else {
+              // Just update status if already in completed tab
+              targetCard.classList.add('completed');
+              var actionBox = targetCard.querySelector('.quest-action-box');
+              if (actionBox) actionBox.innerHTML = '<span style="color:#10b981; font-weight:800; font-size:0.85rem">✓ Đã nhận</span>';
+            }
+          }
+
+          // 4. Show success and refresh lists in background
+          WanderUI.showToast('Chúc mừng! Bạn đã nhận +' + xp + ' XP!', 'success');
+          loadPage();
+        } else {
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '🎁 Nhận';
+          }
+          WanderUI.showToast('Lỗi: ' + (json.message || 'Không thể nhận XP'), 'error');
+        }
+      });
+    }
+
+    loadPage();
+  })();
+  </script>
+  <script src="chat-brain.js"></script>
+  <script src="main.js?v=1777307000000" defer></script>
+</body>
+</html>

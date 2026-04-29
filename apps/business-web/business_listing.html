@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Tìm kiếm doanh nghiệp — WanderViệt</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet"/>
+  
+  <style>
+    :root {
+      --biz-bg: #040914;
+      --biz-sidebar: #060b13;
+      --biz-card: #0a111e;
+      --biz-accent: #3b82f6;
+      --biz-text: #F8FAFC;
+      --biz-text-muted: #64748B;
+      --biz-border: rgba(255, 255, 255, 0.06);
+      --font-main: 'Be Vietnam Pro', sans-serif;
+      --font-head: 'Outfit', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      background: var(--biz-bg);
+      color: var(--biz-text);
+      font-family: var(--font-main);
+      overflow-x: hidden;
+    }
+
+    .app-layout { display: flex; min-height: 100vh; }
+
+    /* --- SIDEBAR --- */
+    .sidebar {
+      width: 280px; background: var(--biz-sidebar);
+      border-right: 1px solid var(--biz-border);
+      height: 100vh; position: sticky; top: 0;
+      padding: 1.5rem; display: flex; flex-direction: column; z-index: 100;
+    }
+
+    .sidebar-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem; margin-bottom: 2rem; }
+    .logo-box { width: 36px; height: 36px; background: linear-gradient(135deg, #3b82f6, #00F0FF); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: white; font-size: 1.2rem; }
+    .brand-name { font-family: var(--font-head); font-size: 1.3rem; font-weight: 800; letter-spacing: -0.5px; }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 0.85rem; padding: 0.8rem 1rem;
+      color: #94A3B8; text-decoration: none; border-radius: 12px;
+      font-size: 0.92rem; font-weight: 500; margin-bottom: 0.3rem; transition: 0.2s;
+    }
+    .nav-item:hover, .nav-item.active { background: rgba(59, 130, 246, 0.1); color: var(--biz-accent); font-weight: 700; }
+
+    /* --- MAIN --- */
+    .main { flex: 1; padding: 2.5rem 3.5rem; max-width: 1440px; margin: 0 auto; min-width: 0; }
+    
+    .header-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2.5rem; }
+    .header-bar h1 { font-family: var(--font-head); font-size: 2.2rem; font-weight: 800; margin: 0; letter-spacing: -0.8px; }
+
+    .search-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--biz-border);
+      padding: 0.8rem 1.2rem;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      width: 450px;
+      transition: 0.3s;
+    }
+    .search-box:focus-within { border-color: var(--biz-accent); background: rgba(255,255,255,0.08); box-shadow: 0 0 20px rgba(59, 130, 246, 0.2); }
+    .search-box input { background: none; border: none; color: white; outline: none; flex: 1; font-size: 1rem; }
+
+    /* --- GRID --- */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 2rem; }
+
+    .card {
+      background: var(--biz-card); border: 1px solid var(--biz-border);
+      border-radius: 24px; overflow: hidden; transition: 0.4s;
+      cursor: pointer; position: relative;
+    }
+    .card:hover { transform: translateY(-10px); border-color: var(--biz-accent); }
+
+    .card-thumb { height: 210px; position: relative; overflow: hidden; }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    .badge {
+      position: absolute; top: 1rem; left: 1rem; padding: 0.4rem 0.8rem;
+      border-radius: 8px; font-size: 0.7rem; font-weight: 800; color: white;
+      backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); z-index: 10;
+    }
+    .bd-diamond { background: linear-gradient(135deg, #3b82f6, #00F0FF); }
+    .bd-platinum { background: linear-gradient(135deg, #10b981, #34d399); }
+    .bd-gold { background: linear-gradient(135deg, #facc15, #eab308); }
+    .bd-silver { background: linear-gradient(135deg, #94a3b8, #64748b); }
+    .bd-bronze { background: linear-gradient(135deg, #b45309, #92400e); }
+
+    .card-info { padding: 1.5rem; }
+    .card-name { font-size: 1.25rem; font-weight: 800; margin-bottom: 0.5rem; color: white; }
+    .card-loc { display: flex; align-items: center; gap: 0.4rem; color: #94A3B8; font-size: 0.85rem; margin-bottom: 1.2rem; }
+    
+    .card-foot { display: flex; justify-content: space-between; align-items: center; padding-top: 1.2rem; border-top: 1px solid rgba(255,255,255,0.05); }
+    .price-part .val { font-family: var(--font-head); font-size: 1.15rem; font-weight: 800; color: white; }
+    .tag { background: rgba(59, 130, 246, 0.1); color: #3b82f6; padding: 0.4rem 0.9rem; border-radius: 8px; font-size: 0.75rem; font-weight: 700; }
+
+    /* Highlight style */
+    mark { background: #facc15; color: #000; border-radius: 2px; padding: 0 2px; }
+
+    .empty-state { text-align: center; padding: 5rem; grid-column: 1 / -1; color: #64748B; }
+  </style>
+</head>
+<body>
+
+<div class="app-layout">
+  
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-box">◈</div>
+      <div class="brand-name">WanderViệt</div>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="index.html" class="nav-item">🏠 Trang chủ</a>
+      <a href="#" class="nav-item active">🔎 Tìm kiếm</a>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <div class="header-bar">
+      <div>
+        <h1>Tìm kiếm đối tác</h1>
+        <p>Lọc theo tên, địa điểm hoặc loại dịch vụ</p>
+      </div>
+      <div class="search-box">
+        <span>🔎</span>
+        <input type="text" id="search-input" placeholder="Nhập từ khóa tìm kiếm..." oninput="searchBusinesses(this.value)">
+      </div>
+    </div>
+
+    <div id="business-list" class="grid">
+      <!-- Kết quả render ở đây -->
+    </div>
+  </main>
+
+</div>
+
+<script src="businessData.js"></script>
+<script>
+  /**
+   * Chức năng loại bỏ dấu tiếng Việt để tìm kiếm chính xác hơn
+   */
+  function removeAccents(str) {
+    return str.normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/đ/g, 'd').replace(/Đ/g, 'D');
+  }
+
+  /**
+   * Cấu trúc highlight chữ trùng khớp (hỗ trợ cả không dấu)
+   */
+  function highlight(text, keyword) {
+    if (!keyword) return text;
+    
+    const normalizedText = removeAccents(text).toLowerCase();
+    const normalizedKeyword = removeAccents(keyword).toLowerCase();
+    const kwLen = normalizedKeyword.length;
+    
+    let result = '';
+    let lastIndex = 0;
+    let index = normalizedText.indexOf(normalizedKeyword);
+
+    if (index === -1) return text;
+
+    while (index !== -1) {
+      result += text.substring(lastIndex, index);
+      // Lấy đoạn gốc từ text dựa trên độ dài của keyword đã chuẩn hóa
+      result += `<mark>${text.substring(index, index + kwLen)}</mark>`;
+      lastIndex = index + kwLen;
+      index = normalizedText.indexOf(normalizedKeyword, lastIndex);
+    }
+    result += text.substring(lastIndex);
+    return result;
+  }
+
+  /**
+   * Hàm nâng cấp tìm kiếm real-time (Accent-Insensitive)
+   */
+  function searchBusinesses(keyword) {
+    const container = document.getElementById('business-list');
+    const rawTerm = keyword.trim();
+    const term = removeAccents(rawTerm).toLowerCase();
+    const formatter = new Intl.NumberFormat('vi-VN');
+
+    // Filter array dựa trên chuỗi không dấu
+    const filtered = businessData.filter(biz => {
+      const name = removeAccents(biz.name).toLowerCase();
+      const loc = removeAccents(biz.location).toLowerCase();
+      const cat = removeAccents(biz.category).toLowerCase();
+      
+      return name.includes(term) || loc.includes(term) || cat.includes(term);
+    });
+
+    // Render kết quả
+    container.innerHTML = '';
+    
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state"><h3>Không tìm thấy kết quả phù hợp</h3><p>Hãy thử từ khóa khác nhé!</p></div>';
+      return;
+    }
+
+    filtered.forEach(biz => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      
+      // Highlight nội dung
+      const hName = highlight(biz.name, term);
+      const hLoc = highlight(biz.location, term);
+      const hCat = highlight(biz.category, term);
+
+      card.innerHTML = `
+        <div class="card-thumb">
+          <div class="badge bd-${biz.rank.toLowerCase()}">${biz.rank.toUpperCase()}</div>
+          <img src="${biz.image}" alt="${biz.name}">
+        </div>
+        <div class="card-info">
+          <h3 class="card-name">${hName}</h3>
+          <div class="card-loc">📍 ${hLoc}</div>
+          <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1.2rem;">
+            <span style="color:#facc15; font-weight:800;">★ ${biz.rating}</span>
+            <span style="color:#64748B; font-size:0.85rem;">(${biz.reviews} đánh giá)</span>
+          </div>
+          <div class="card-foot">
+            <div class="price-part">
+              <div class="lbl">Từ</div>
+              <div class="val">${formatter.format(biz.price)}<span>VND</span></div>
+            </div>
+            <div class="tag">${hCat}</div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    });
+  }
+
+  // Khởi tạo trang
+  document.addEventListener('DOMContentLoaded', () => searchBusinesses(''));
+</script>
+
+</body>
+</html>

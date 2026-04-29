@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WanderViệt — Bảng Xếp Hạng Nhà Thám Hiểm</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="global-tokens.css" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      padding-top: var(--header-h);
+    }
+
+    .lb-hero {
+      position: relative;
+      padding: 2.5rem 0 3rem;
+      background: var(--bg);
+      overflow: hidden;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .lb-hero__orb {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      filter: blur(80px);
+      z-index: 0;
+      opacity: 0.2;
+      pointer-events: none;
+    }
+
+    .lb-hero__orb--1 {
+      top: -150px;
+      right: -50px;
+    }
+
+    .lb-hero__content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .lb-hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.8rem, 4vw, 2.4rem);
+      font-weight: 850;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.03em;
+    }
+
+    .lb-hero p {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      max-width: 500px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .lb-main {
+      padding: 2rem 0 4rem;
+    }
+
+    .lb-card {
+      background: var(--bg-card);
+      backdrop-filter: var(--surface-blur);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 1.5rem 2rem 2.5rem;
+      box-shadow: var(--shadow-xl);
+    }
+
+    .lb-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .lb-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .lb-side-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .side-card-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .lb-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+
+    .lb-tabs {
+      display: flex;
+      gap: 0.25rem;
+      background: var(--bg-elevated);
+      padding: 0.35rem;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+    }
+
+    .lb-tab {
+      padding: 0.5rem 1rem;
+      border-radius: 100px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .lb-tab.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    }
+
+    .lb-search input {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.6rem 1.25rem;
+      border-radius: 100px;
+      outline: none;
+      font-size: 0.9rem;
+      width: 200px;
+      transition: all 0.3s;
+    }
+
+    .lb-search input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+      width: 240px;
+    }
+
+    .my-stats-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 1.5rem 1rem;
+      background: var(--bg-elevated);
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .sidebar-rank-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg-elevated);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      margin-bottom: 0.5rem;
+      transition: all 0.2s;
+    }
+
+    .sidebar-rank-item:hover {
+      transform: translateX(5px);
+      border-color: var(--primary);
+    }
+
+    .sidebar-rank-item .rank-sprite {
+      transform: scale(0.5);
+      margin: -20px -20px -20px -20px;
+    }
+
+    .sidebar-rank-item .rank-text {
+      display: none;
+    }
+
+    .sidebar-rank-info {
+      flex: 1;
+      text-align: left;
+    }
+
+    .sidebar-rank-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text);
+    }
+
+    .sidebar-rank-xp {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .lb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .lb-item {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 1rem 1.5rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      transition: all 0.3s var(--ease);
+    }
+
+    .lb-item:hover {
+      transform: scale(1.01);
+      border-color: var(--primary);
+      background: var(--bg-card);
+      box-shadow: var(--shadow-md);
+    }
+
+    .lb-rank-badge {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 850;
+      font-size: 1.1rem;
+      background: var(--bg);
+      border-radius: 10px;
+      flex-shrink: 0;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .rank-1 .lb-rank-badge {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      font-size: 1.25rem;
+    }
+
+    .rank-2 .lb-rank-badge {
+      background: #94a3b8;
+      color: var(--bg);
+      border: none;
+    }
+
+    .rank-3 .lb-rank-badge {
+      background: #b45309;
+      color: var(--bg);
+      border: none;
+    }
+
+    .lb-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1.5px solid var(--border);
+      background: var(--bg-elevated);
+      flex-shrink: 0;
+    }
+
+    .lb-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .lb-info {
+      flex: 1;
+    }
+
+    .lb-name {
+      display: block;
+      font-weight: 700;
+      font-size: 1rem;
+      margin-bottom: 0.4rem;
+      color: var(--text);
+    }
+
+    .lb-tier {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    .lb-tier .rank-sprite {
+      transform: scale(0.55);
+      margin-top: -18px;
+      margin-bottom: -18px;
+      margin-left: -20px;
+      margin-right: -15px;
+      /* Pull text closer to the scaled sprite */
+    }
+
+    .lb-xp {
+      text-align: right;
+    }
+
+    .lb-xp-val {
+      display: block;
+      font-weight: 850;
+      font-size: 1.3rem;
+      color: var(--primary);
+      line-height: 1;
+    }
+
+    .lb-xp-label {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+    }
+
+    .loading-wrap {
+      text-align: center;
+      padding: 4rem 0;
+      color: var(--text-muted);
+    }
+
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1.2rem;
+    }
+
+    .lb-podium {
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      gap: 1rem;
+      margin-bottom: 3rem;
+      padding-top: 2rem;
+    }
+
+    .podium-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      width: 140px;
+      animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+    }
+
+    .podium-item.rank-1 {
+      z-index: 3;
+      animation-delay: 0.2s;
+      width: 140px;
+    }
+
+    .podium-item.rank-2 {
+      z-index: 2;
+      animation-delay: 0.4s;
+    }
+
+    .podium-item.rank-3 {
+      z-index: 1;
+      animation-delay: 0.6s;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .podium-avatar-wrap {
+      position: relative;
+      margin-bottom: -15px;
+      z-index: 2;
+    }
+
+    .podium-avatar {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      border: 3px solid var(--bg-card);
+      overflow: hidden;
+      background: var(--bg-elevated);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      position: relative;
+    }
+
+    .rank-1 .podium-avatar {
+      width: 96px;
+      height: 96px;
+      border-color: #fbbf24;
+      box-shadow: 0 0 25px rgba(251, 191, 36, 0.4);
+    }
+
+    .rank-2 .podium-avatar {
+      border-color: #cbd5e1;
+    }
+
+    .rank-3 .podium-avatar {
+      border-color: #b45309;
+    }
+
+    .podium-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .podium-crown {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.75rem;
+      filter: drop-shadow(0 2px 6px rgba(251, 191, 36, 0.6));
+    }
+
+    .podium-base {
+      width: 100%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.01) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: none;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 0.5rem 0.75rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .rank-1 .podium-base {
+      height: 160px;
+      background: linear-gradient(180deg, rgba(251, 191, 36, 0.12) 0%, rgba(251, 191, 36, 0.01) 100%);
+      border-color: rgba(251, 191, 36, 0.25);
+    }
+
+    .rank-2 .podium-base {
+      height: 120px;
+      background: linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0%, rgba(148, 163, 184, 0.01) 100%);
+      border-color: rgba(148, 163, 184, 0.2);
+    }
+
+    .rank-3 .podium-base {
+      height: 95px;
+      background: linear-gradient(180deg, rgba(180, 83, 9, 0.08) 0%, rgba(180, 83, 9, 0.01) 100%);
+      border-color: rgba(180, 83, 9, 0.2);
+    }
+
+    .podium-badge-wrap {
+      margin-bottom: 0.25rem;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
+    /* Target the container returned by WanderUI.getRankBadgeHTML inside the podium */
+    .podium-badge-wrap .rank-badge-container {
+      flex-direction: column;
+      gap: 0;
+      transform: scale(0.8);
+      transform-origin: center top;
+      margin-bottom: -10px;
+    }
+
+    .podium-badge-wrap .rank-text {
+      font-size: 0.7rem;
+      margin-top: -15px;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .podium-name-top {
+      font-weight: 750;
+      font-size: 0.95rem;
+      color: var(--text);
+      text-align: center;
+      margin-bottom: 0.75rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 130px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .podium-xp {
+      font-size: 1.15rem;
+      font-weight: 850;
+      color: var(--text);
+      margin-top: 0.25rem;
+      position: relative;
+      z-index: 2;
+    }
+
+    .rank-1 .podium-xp {
+      color: #fbbf24;
+      font-size: 1.35rem;
+    }
+
+    .rank-2 .podium-xp {
+      color: #cbd5e1;
+    }
+
+    .rank-3 .podium-xp {
+      color: #d97706;
+    }
+
+    .podium-xp-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 700;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Update List styles */
+    .lb-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .lb-item {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      transition: all 0.3s var(--ease);
+      animation: slideIn 0.4s ease backwards;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-15px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    /* Rank Tiers Section Styles */
+    .ranks-grid-section {
+      margin-top: 5rem;
+      padding-bottom: 5rem;
+    }
+
+    .ranks-grid-title {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .ranks-grid-title h2 {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .ranks-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .rank-tier-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: all 0.3s var(--ease);
+      position: relative;
+    }
+
+    .rank-tier-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--primary);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .rank-tier-icon {
+      margin-bottom: 1rem;
+    }
+
+    .rank-tier-name {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .rank-tier-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-bottom: 1.25rem;
+      line-height: 1.4;
+    }
+
+    .rank-levels {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .rank-level-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-elevated);
+      border-radius: 10px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .rank-level-tag {
+      color: var(--primary);
+    }
+
+    .rank-xp-tag {
+      color: var(--text-muted);
+    }
+
+    /* Rank Specific Accents - Premium Style for ALL */
+    :root {
+      --lb-bronze-text: #fcd34d;
+      --lb-bronze-xp: #fbbf24;
+      --lb-silver-text: #e2e8f0;
+      --lb-silver-xp: #cbd5e1;
+      --lb-gold-text: #fef3c7;
+      --lb-gold-xp: #fde68a;
+      --lb-plat-text: #ccfbf1;
+      --lb-plat-xp: #99f6e4;
+      --lb-diam-text: #dbeafe;
+      --lb-diam-xp: #bfdbfe;
+      --lb-leg-text: #f3e8ff;
+      --lb-leg-xp: #d8b4fe;
+    }
+
+    [data-theme="light"] {
+      --lb-bronze-text: #92400e;
+      --lb-bronze-xp: #b45309;
+      --lb-silver-text: #334155;
+      --lb-silver-xp: #475569;
+      --lb-gold-text: #a16207;
+      --lb-gold-xp: #ca8a04;
+      --lb-plat-text: #0f766e;
+      --lb-plat-xp: #0d9488;
+      --lb-diam-text: #1d4ed8;
+      --lb-diam-xp: #2563eb;
+      --lb-leg-text: #6b21a8;
+      --lb-leg-xp: #7e22ce;
+    }
+
+    .rank-tier-card {
+      border: none !important;
+      outline: none !important;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .rank-tier-card:hover {
+      border: none !important;
+      transform: translateY(-8px) scale(1.02);
+    }
+
+    /* Bronze */
+    .tier-bronze {
+      background: linear-gradient(180deg, rgba(180, 83, 9, 0.08) 0%, var(--bg-card) 100%);
+      box-shadow: 0 4px 24px rgba(180, 83, 9, 0.12);
+    }
+
+    .tier-bronze:hover {
+      box-shadow: 0 12px 48px rgba(180, 83, 9, 0.25) !important;
+    }
+
+    .tier-bronze .rank-tier-icon {
+      filter: drop-shadow(0 0 20px rgba(180, 83, 9, 0.5));
+    }
+
+    .tier-bronze .rank-level-row {
+      background: rgba(180, 83, 9, 0.05);
+      border: 1px solid rgba(180, 83, 9, 0.1);
+      color: var(--lb-bronze-text);
+    }
+
+    .tier-bronze .rank-xp-tag {
+      color: var(--lb-bronze-xp);
+    }
+
+    /* Silver */
+    .tier-silver {
+      background: linear-gradient(180deg, rgba(148, 163, 184, 0.08) 0%, var(--bg-card) 100%);
+      box-shadow: 0 4px 24px rgba(148, 163, 184, 0.12);
+    }
+
+    .tier-silver:hover {
+      box-shadow: 0 12px 48px rgba(148, 163, 184, 0.25) !important;
+    }
+
+    .tier-silver .rank-tier-icon {
+      filter: drop-shadow(0 0 20px rgba(148, 163, 184, 0.5));
+    }
+
+    .tier-silver .rank-level-row {
+      background: rgba(148, 163, 184, 0.05);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      color: var(--lb-silver-text);
+    }
+
+    .tier-silver .rank-xp-tag {
+      color: var(--lb-silver-xp);
+    }
+
+    /* Gold */
+    .tier-gold {
+      background: linear-gradient(180deg, rgba(251, 191, 36, 0.08) 0%, var(--bg-card) 100%);
+      box-shadow: 0 4px 24px rgba(251, 191, 36, 0.12);
+    }
+
+    .tier-gold:hover {
+      box-shadow: 0 12px 48px rgba(251, 191, 36, 0.25) !important;
+    }
+
+    .tier-gold .rank-tier-icon {
+      filter: drop-shadow(0 0 20px rgba(251, 191, 36, 0.5));
+    }
+
+    .tier-gold .rank-level-row {
+      background: rgba(251, 191, 36, 0.05);
+      border: 1px solid rgba(251, 191, 36, 0.1);
+      color: var(--lb-gold-text);
+    }
+
+    .tier-gold .rank-xp-tag {
+      color: var(--lb-gold-xp);
+    }
+
+    /* Platinum */
+    .tier-platinum {
+      background: linear-gradient(180deg, rgba(45, 212, 191, 0.08) 0%, var(--bg-card) 100%);
+      box-shadow: 0 4px 24px rgba(45, 212, 191, 0.12);
+    }
+
+    .tier-platinum:hover {
+      box-shadow: 0 12px 48px rgba(45, 212, 191, 0.25) !important;
+    }
+
+    .tier-platinum .rank-tier-icon {
+      filter: drop-shadow(0 0 20px rgba(45, 212, 191, 0.5));
+    }
+
+    .tier-platinum .rank-level-row {
+      background: rgba(45, 212, 191, 0.05);
+      border: 1px solid rgba(45, 212, 191, 0.1);
+      color: var(--lb-plat-text);
+    }
+
+    .tier-platinum .rank-xp-tag {
+      color: var(--lb-plat-xp);
+    }
+
+    /* Diamond */
+    .tier-diamond {
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.08) 0%, var(--bg-card) 100%);
+      box-shadow: 0 4px 24px rgba(59, 130, 246, 0.12);
+    }
+
+    .tier-diamond:hover {
+      box-shadow: 0 12px 48px rgba(59, 130, 246, 0.25) !important;
+    }
+
+    .tier-diamond .rank-tier-icon {
+      filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.5));
+    }
+
+    .tier-diamond .rank-level-row {
+      background: rgba(59, 130, 246, 0.05);
+      border: 1px solid rgba(59, 130, 246, 0.1);
+      color: var(--lb-diam-text);
+    }
+
+    .tier-diamond .rank-xp-tag {
+      color: var(--lb-diam-xp);
+    }
+
+    /* Legendary */
+    .tier-legendary {
+      background: linear-gradient(180deg, rgba(168, 85, 247, 0.12) 0%, var(--bg-card) 100%);
+      box-shadow: 0 4px 24px rgba(168, 85, 247, 0.18);
+    }
+
+    .tier-legendary:hover {
+      box-shadow: 0 12px 48px rgba(168, 85, 247, 0.35) !important;
+    }
+
+    .tier-legendary .rank-tier-icon {
+      filter: drop-shadow(0 0 25px rgba(168, 85, 247, 0.7));
+    }
+
+    .tier-legendary .rank-level-row {
+      background: rgba(168, 85, 247, 0.08);
+      border: 1px solid rgba(168, 85, 247, 0.15);
+      color: var(--lb-leg-text);
+    }
+
+    .tier-legendary .rank-xp-tag {
+      color: var(--lb-leg-xp);
+    }
+  </style>
+</head>
+
+<body>
+  <header class="site-header" id="header-container"></header>
+
+  <section class="lb-hero">
+    <div class="lb-hero__orb lb-hero__orb--1"></div>
+    <div class="container lb-hero__content">
+      <h1>Bảng Xếp Hạng</h1>
+      <p>Vinh danh những nhà thám hiểm tài ba nhất của WanderViệt. Hoàn thành nhiệm vụ, khám phá điểm đến và thăng hạng
+        ngay hôm nay!</p>
+    </div>
+  </section>
+
+  <main class="lb-main">
+    <div class="container lb-layout">
+      <!-- Left Column: Main Leaderboard -->
+      <div class="lb-left">
+        <div class="lb-card">
+          <!-- Card Header with Tabs and Search -->
+          <div class="lb-card-header">
+            <div class="lb-tabs">
+              <button class="lb-tab active">Mùa giải này</button>
+              <button class="lb-tab">Mọi thời đại</button>
+              <button class="lb-tab">Bạn bè</button>
+            </div>
+            <div class="lb-search">
+              <input type="text" id="lbSearchInput" placeholder="🔍 Tìm nhà thám hiểm..." />
+            </div>
+          </div>
+
+          <div id="lbPodium" class="lb-podium" style="display: none;"></div>
+          <div id="leaderboardList" class="lb-list">
+            <div class="loading-wrap">
+              <div class="loading-spinner"></div>
+              <p>Đang tải bảng xếp hạng nhà thám hiểm...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Dashboard Sidebar -->
+      <div class="lb-right">
+        <!-- User Stats Card -->
+        <div class="lb-side-card my-stats-card">
+          <h3 class="side-card-title">Thống kê của bạn</h3>
+          <div id="myStatsContent" class="my-stats-content">
+            <p style="color: var(--text-muted); font-size: 0.9rem;">Đang tải dữ liệu cá nhân...</p>
+          </div>
+        </div>
+
+        <!-- Rank System Mini List -->
+        <div class="lb-side-card rank-info-card">
+          <h3 class="side-card-title">Hệ thống Cấp bậc</h3>
+          <div id="ranksSidebar" class="ranks-sidebar-list">
+            <!-- Dynamically filled by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- SVG filter for background removal is now injected via SharedUI.js?v=1777307000000 for consistency across all pages -->
+
+  <script src="SharedUI.js?v=1777335000000"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const list = document.getElementById('leaderboardList');
+      const podium = document.getElementById('lbPodium');
+      const ranksSidebar = document.getElementById('ranksSidebar');
+
+      // --- Render Rank Tiers Grid ---
+      const rankTiersData = [
+        { name: 'Đồng', class: 'tier-bronze', desc: 'Bước chân đầu tiên của những nhà thám hiểm trẻ tuổi.', levels: [{ t: 'I', x: 0 }, { t: 'II', x: 100 }, { t: 'III', x: 200 }] },
+        { name: 'Bạc', class: 'tier-silver', desc: 'Dành cho những người đã có kinh nghiệm xê dịch.', levels: [{ t: 'I', x: 300 }, { t: 'II', x: 500 }, { t: 'III', x: 700 }] },
+        { name: 'Vàng', class: 'tier-gold', desc: 'Những nhà du hành chuyên nghiệp với niềm đam mê lớn.', levels: [{ t: 'I', x: 1000 }, { t: 'II', x: 1300 }, { t: 'III', x: 1600 }] },
+        { name: 'Bạch Kim', class: 'tier-platinum', desc: 'Sự tinh tế và đẳng cấp trong từng chuyến đi.', levels: [{ t: 'I', x: 2000 }, { t: 'II', x: 2400 }, { t: 'III', x: 2800 }] },
+        { name: 'Kim Cương', class: 'tier-diamond', desc: 'Biểu tượng của sự bền bỉ và am hiểu sâu sắc về du lịch.', levels: [{ t: 'I', x: 3200 }, { t: 'II', x: 3700 }, { t: 'III', x: 4200 }] },
+        { name: 'Huyền Thoại', class: 'tier-legendary', desc: 'Đỉnh cao vinh quang. Thế giới nằm trong lòng bàn tay bạn.', levels: [{ t: 'Vô Song', x: 5000 }] }
+      ];
+
+      if (ranksSidebar) {
+        ranksSidebar.innerHTML = rankTiersData.map(tier => `
+          <div class="sidebar-rank-item">
+            ${WanderUI.getRankBadgeHTML(tier.name, tier.name === 'Huyền Thoại' ? '' : 'I')}
+            <div class="sidebar-rank-info">
+              <div class="sidebar-rank-name">Hạng ${tier.name}</div>
+              <div class="sidebar-rank-xp">Từ ${tier.levels[0].x.toLocaleString()} XP</div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      const showLoginPrompt = () => {
+        if (!myStatsContent) return;
+        myStatsContent.innerHTML = `
+          <div style="padding: 1rem 0; color: var(--text-muted);">
+            <div style="font-size: 2rem; margin-bottom: 0.5rem;">👤</div>
+            <p style="margin-bottom: 1rem;">Đăng nhập để xem thống kê của bạn</p>
+            <button class="btn btn--primary btn--sm" data-auth-open>Tham gia ngay</button>
+          </div>
+        `;
+      };
+
+      let allUsers = [];
+      const myStatsContent = document.getElementById('myStatsContent');
+      const token = localStorage.getItem('wander_token');
+      if (token && myStatsContent) {
+        try {
+          // Attempt to get user from token or API. For now, decode token.
+          const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+          const padding = '='.repeat((4 - base64.length % 4) % 4);
+          const payload = JSON.parse(decodeURIComponent(escape(atob(base64 + padding))));
+          const u = payload.user || payload.account || payload;
+
+          fetch('/api/auth/user/me', { headers: { 'x-auth-token': token } })
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.user) {
+                const user = data.user;
+                myStatsContent.innerHTML = `
+                  <div style="width: 64px; height: 64px; border-radius: 16px; overflow: hidden; border: 2px solid var(--primary); margin-bottom: 0.5rem; background: var(--bg-elevated);">
+                    ${user.avatar ? `<img src="${user.avatar}" style="width:100%;height:100%;object-fit:cover;">` : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem;">👤</div>`}
+                  </div>
+                  <h4 style="font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem;">${user.displayName || user.name || 'Người dùng'}</h4>
+                  <div style="display:flex; align-items:center; gap:0.5rem; justify-content:center; margin-bottom: 0.5rem;">
+                    <div style="transform: scale(0.6); margin: -20px -25px -20px -25px;">
+                      ${WanderUI.getRankBadgeHTML(user.rank || 'Đồng', user.rankTier || 'I')}
+                    </div>
+                  </div>
+                  <div style="font-size: 1.5rem; font-weight: 850; color: var(--primary);">${(user.points || 0).toLocaleString()} <span style="font-size:0.8rem; color:var(--text-muted);">XP</span></div>
+                `;
+              } else {
+                // Token invalid or expired
+                localStorage.removeItem('wander_token');
+                showLoginPrompt();
+              }
+            }).catch(e => {
+              console.error('Stats fetch error:', e);
+              myStatsContent.innerHTML = '<p style="color:var(--text-muted); font-size:0.9rem;">Tạm thời không thể tải thống kê</p>';
+            });
+        } catch (e) {
+          myStatsContent.innerHTML = '<p>Vui lòng đăng nhập lại</p>';
+        }
+      } else if (myStatsContent) {
+        showLoginPrompt();
+      }
+
+      // --- Render Leaderboard ---
+      fetch('/api/auth/leaderboard')
+        .then(res => res.json())
+        .then(json => {
+          if (!json.success || !json.leaderboard.length) {
+            list.innerHTML = '<div class="loading-wrap"><p>Chưa có dữ liệu bảng xếp hạng</p></div>';
+            return;
+          }
+          allUsers = json.leaderboard;
+          renderLeaderboard(allUsers);
+        })
+        .catch(err => {
+          console.error('Leaderboard fetch error:', err);
+          list.innerHTML = '<div class="loading-wrap"><p style="color:var(--danger);">❌ Lỗi kết nối máy chủ</p></div>';
+        });
+
+      function renderLeaderboard(users) {
+        if (!users.length) {
+          list.innerHTML = '<div class="loading-wrap"><p>Không tìm thấy nhà thám hiểm nào</p></div>';
+          podium.style.display = 'none';
+          return;
+        }
+
+        list.innerHTML = '';
+
+        // Render Podium (Top 3)
+        if (users.length > 0) {
+          podium.style.display = 'flex';
+          const renderPodiumItem = (u, rank) => {
+            if (!u) return '';
+            const r = u.rank || 'Đồng';
+            const isFirst = rank === 1;
+            const crownHtml = isFirst ? '<div class="podium-crown">👑</div>' : '';
+            return `
+              <div class="podium-item rank-${rank}">
+                <div class="podium-name-top" title="${u.displayName || u.name}">${u.displayName || u.name}</div>
+                <div class="podium-avatar-wrap">
+                  ${crownHtml}
+                  <div class="podium-avatar">
+                    ${u.avatar ? `<img src="${u.avatar}" alt="Avatar">` : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:${isFirst ? '2rem' : '1.5rem'}; background: var(--bg-elevated);">👤</div>`}
+                  </div>
+                </div>
+                <div class="podium-base">
+                  <div class="podium-badge-wrap">${WanderUI.getRankBadgeHTML(r, u.rankTier)}</div>
+                  <span class="podium-xp" style="margin-top: 5px;">${u.points.toLocaleString()}</span>
+                  <span class="podium-xp-label">XP</span>
+                </div>
+              </div>
+            `;
+          };
+
+          let podiumHtml = '';
+          if (users[1]) podiumHtml += renderPodiumItem(users[1], 2);
+          if (users[0]) podiumHtml += renderPodiumItem(users[0], 1);
+          if (users[2]) podiumHtml += renderPodiumItem(users[2], 3);
+          podium.innerHTML = podiumHtml;
+        }
+
+        // Render Rank 4+
+        const listUsers = users.slice(3);
+        if (listUsers.length > 0) {
+          listUsers.forEach((u, idx) => {
+            const rankNum = users.indexOf(u) + 1;
+            const r = u.rank || 'Đồng';
+            const item = document.createElement('div');
+            item.className = 'lb-item';
+            item.style.animationDelay = `${idx * 0.05}s`;
+            item.innerHTML = `
+              <div class="lb-rank-badge">${rankNum}</div>
+              <div class="lb-avatar">
+                ${u.avatar ? `<img src="${u.avatar}" alt="Avatar">` : `<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:var(--text-muted); font-size:1.5rem;">👤</div>`}
+              </div>
+              <div class="lb-info">
+                <span class="lb-name">${u.displayName || u.name}</span>
+                <div class="lb-tier">${WanderUI.getRankBadgeHTML(r, u.rankTier)}</div>
+              </div>
+              <div class="lb-xp">
+                <span class="lb-xp-val">${u.points.toLocaleString()}</span>
+                <span class="lb-xp-label">XP</span>
+              </div>
+            `;
+            list.appendChild(item);
+          });
+        } else if (users.length <= 3) {
+          list.innerHTML = '<p style="text-align:center; color:var(--text-muted); margin: 2rem 0;">Chưa có thêm nhà thám hiểm nào.</p>';
+        }
+      }
+
+      // --- Search Implementation ---
+      const searchInput = document.getElementById('lbSearchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          const q = e.target.value.toLowerCase().trim();
+          if (!q) {
+            renderLeaderboard(allUsers);
+            return;
+          }
+          const filtered = allUsers.filter(u =>
+            (u.displayName || u.name || '').toLowerCase().includes(q)
+          );
+          renderLeaderboard(filtered);
+        });
+      }
+
+      // --- Tabs Implementation ---
+      const tabs = document.querySelectorAll('.lb-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          tabs.forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+
+          const text = tab.textContent.trim();
+          if (text === 'Mùa giải này') {
+            renderLeaderboard(allUsers);
+          } else if (text === 'Mọi thời đại') {
+            renderLeaderboard(allUsers);
+            WanderUI.showToast("Đang hiển thị bảng xếp hạng tổng quát", "info");
+          } else if (text === 'Bạn bè') {
+            const token = localStorage.getItem('wander_token');
+            if (!token) {
+              WanderUI.showToast("Vui lòng đăng nhập để xem bạn bè", "warning");
+              return;
+            }
+            list.innerHTML = '<div class="loading-wrap"><p>Bạn chưa kết nối với nhà thám hiểm nào</p></div>';
+            podium.style.display = 'none';
+          }
+        });
+      });
+    });
+
+    // Track quest activity: Xem bảng xếp hạng
+    try {
+      var qa = JSON.parse(localStorage.getItem('wv_quest_activity') || '{}');
+      qa.socLeaderboard = 1;
+      localStorage.setItem('wv_quest_activity', JSON.stringify(qa));
+    } catch (e) { }
+  </script>
+  <script src="SharedUI.js?v=1777335000000"></script>
+  <script src="chat-brain.js"></script>
+  <script src="main.js?v=1777307000000" defer></script>
+</body>
+
+</html>
