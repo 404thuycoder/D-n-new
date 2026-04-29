@@ -897,10 +897,7 @@
               break;
             case 'analytics':
               await loadSystemStats();
-              initActivityChart();
-              loadDistributionChart();
-              loadMockCharts();
-              loadRankings();
+              await loadRankings();
               break;
             case 'users': await loadUsers(); break;
             case 'places': await loadPlaces(); break;
@@ -962,7 +959,6 @@
                const p = document.getElementById('main-activity-period')?.value || 'day';
                initActivityChart('line', p).catch(e => {});
                loadDistributionChart().catch(e => {});
-               loadMockCharts();
             }
             if (hubTab === 'analytics-users') {
                const p = document.querySelector('.chart-period-select[data-chart="users"]')?.value || 'day';
@@ -1572,15 +1568,15 @@
                style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid rgba(255,255,255,0.1)" />
         </td>
         <td>
-          <div style="display:flex; align-items:center; gap:0.25rem;">
+          <div style="display:flex; align-items:center; gap:0.25rem; margin-bottom: 2px;">
             ${statusDot}
-            <div style="font-weight:600; color:white">${u.displayName || u.name || 'Người dùng'}</div>
+            <div style="font-weight:600; color:white">${u.displayName || 'Người dùng'}</div>
           </div>
-          <div style="font-size:0.7rem; color:var(--admin-text-muted); display:flex; align-items:center; gap:0.5rem">
-            <span>ID: ${u._id}</span>
-            <span style="color:${statusColor}">${statusText}</span>
+          <div style="font-size:0.7rem; color:var(--admin-text-muted); display:flex; align-items:center; gap:0.5rem; margin-bottom: 2px;">
+            <span style="font-family:monospace; color:var(--admin-primary); font-weight:700;">${getDisplayId(u)}</span>
+            <span style="color:${statusColor}; font-size: 0.65rem;">• ${statusText}</span>
           </div>
-          <div style="font-size:0.75rem; color: #94a3b8; font-family:monospace;">${u.email}</div>
+          <div style="font-size:0.7rem; color: #64748b; font-family:monospace;">${u.email}</div>
         </td>
         <td>${rankBadge}</td>
         <td><span class="role-badge" data-role="${u.role || 'user'}">${roleLabel}</span></td>
@@ -1775,8 +1771,8 @@
         <td colspan="4">
           <div class="detail-content">
             <strong>Mô tả:</strong> ${log.details || 'Không có mô tả'}<br>
-            <strong>ID Đối tượng:</strong> ${log.targetId || 'N/A'}<br>
-            <strong>ID User:</strong> ${log.userId || 'N/A'}
+            <strong>ID Đối tượng:</strong> <span title="${log.targetId || ''}">${truncateId(log.targetId)}</span><br>
+            <strong>ID User:</strong> <span title="${log.userId || ''}">${truncateId(log.userId)}</span>
           </div>
         </td>
       `;
@@ -1982,7 +1978,7 @@
         <td>
           <div class="place-name-cell">
             <strong>${p.name}</strong> ${p.top ? '<span class="badge-top">★</span>' : ''}
-            <div class="place-id-hint">ID: ${p.id}</div>
+            <div class="place-id-hint" title="${p.id}" style="cursor:help">ID: ${truncateId(p.id)}</div>
           </div>
         </td>
         <td><span class="region-pill">${p.region || '—'}</span></td>
@@ -2197,6 +2193,24 @@
   });
 
   // --- Utils ---
+  function getDisplayId(u) {
+    if (!u) return 'unknown';
+    if (u.customId) return u.customId; // Match the ID shown in the User Portal
+    
+    const suffix = String(u._id || '').substring(String(u._id || '').length - 8);
+    const role = u.role || 'user';
+    if (u.isSuperAdmin || u.isAdmin || role === 'admin' || role === 'superadmin') return 'admin' + suffix;
+    if (u.isBusiness || role === 'business') return 'business' + suffix;
+    return 'user' + suffix;
+  }
+
+  function truncateId(id) {
+    if (!id || id === 'N/A') return 'N/A';
+    const s = String(id);
+    if (s.length <= 12) return s;
+    return s.substring(0, 6) + '...' + s.substring(s.length - 4);
+  }
+
   function closeAllModals() {
     if (userModal) userModal.classList.remove('is-open');
     if (placeModal) placeModal.classList.remove('is-open');
