@@ -871,7 +871,7 @@
           const permissions = currentAdmin.permissions || ['overview'];
           
           // Map tab names to permission names if they differ
-          const permMap = { 'broadcast': 'notifications' };
+          const permMap = {}; // Fixed: 'broadcast' uses 'broadcast' permission, not 'notifications'
           const requiredPerm = permMap[tab] || tab;
 
           if (!isSuperAdmin && tab !== 'overview' && !permissions.includes(requiredPerm)) {
@@ -2948,15 +2948,15 @@
             return;
         }
 
-        const body = {
-            ...Object.fromEntries(formData),
+        const payload = {
+            ...body,
             isScheduled,
             scheduledTime
         };
 
         const res = await apiFetch('/api/notifications/broadcast', {
           method: 'POST',
-          body: JSON.stringify(body)
+          body: JSON.stringify(payload)
         });
         
         if (res.success) {
