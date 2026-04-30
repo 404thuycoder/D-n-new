@@ -1,14 +1,18 @@
 (function () {
   "use strict";
 
-  // IMMEDIATE FAIL-SAFE: if anything goes wrong, ensure we can at least see the login
+  // IMMEDIATE FAIL-SAFE: if anything goes wrong, log it
   window.onerror = function(msg, url, line) {
     console.error("Global Error Caught:", msg, "at", url, ":", line);
-    const wo = document.getElementById('welcome-overlay');
-    if (wo) wo.style.display = 'none';
-    const lo = document.getElementById('admin-login-overlay');
-    if (lo) lo.style.display = 'flex';
+    // Don't force login reset for non-auth errors to avoid "hanging" UX
+    if (msg.includes('401') || msg.includes('Unauthorized')) {
+        const lo = document.getElementById('admin-login-overlay');
+        if (lo) lo.style.display = 'flex';
+    }
   };
+
+  // Global WanderAdmin object for administrative actions
+  window.WanderAdmin = window.WanderAdmin || {};
 
   
   // === WanderUI Utilities ===
@@ -512,6 +516,7 @@
   }
 
   async function apiFetch(url, options = {}, timeout = 30000) {
+    window.apiFetch = apiFetch;
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     
@@ -658,6 +663,12 @@
         else if (targetTab === 'places') loadPlaces();
         else if (targetTab === 'logs') loadLogs('all');
         else if (targetTab === 'knowledge') loadKnowledge();
+        else if (targetTab === 'admins') {
+          if (typeof loadAdminsList === 'function') loadAdminsList();
+        }
+        else if (targetTab === 'broadcast') {
+          if (typeof loadBroadcastHistory === 'function') loadBroadcastHistory();
+        }
       }
 
       setupTabSwitching();
@@ -707,6 +718,12 @@
         if (activeTab === 'feedbacks') loadFeedbacks(true, 'bar', 'day').catch(e => {});
         if (activeTab === 'itinerary') loadItineraries(true, 'bar', 'day').catch(e => {});
         if (activeTab === 'moderation') loadModeration(true).catch(e => {});
+        if (activeTab === 'admins') {
+          if (typeof loadAdminsList === 'function') loadAdminsList().catch(e => {});
+        }
+        if (activeTab === 'broadcast') {
+          if (typeof loadBroadcastHistory === 'function') loadBroadcastHistory().catch(e => {});
+        }
       };
 
       // Independent Chart Selectors
@@ -907,11 +924,13 @@
             case 'ai-intelligence': loadAIIntel().catch(e => {}); break;
             case 'logs': await loadLogs('all'); break;
             case 'moderation': await loadModeration(); break;
-            case 'admins': // Add this if needed
+            case 'admins': 
+              if (typeof loadAdminsList === 'function') await loadAdminsList(); 
               break;
             case 'broadcast':
               if (typeof setupBroadcastForm === 'function') setupBroadcastForm();
               loadNotificationTemplates();
+              if (typeof loadBroadcastHistory === 'function') loadBroadcastHistory();
               break;
             case 'system-config': loadSystemConfig(); break;
             case 'ai-intelligence': setupAIHub(); break;
@@ -1012,17 +1031,41 @@
   function animateValue(id, start, end, duration) {
     const obj = document.getElementById(id);
     if (!obj) return;
+    
+    // Ensure we don't stack animations
+    if (obj.dataset.animRunning === 'true' && obj._currentAnim) {
+      cancelAnimationFrame(obj._currentAnim);
+    }
+
     const range = end - start;
-    let current = start;
-    const increment = end > start ? 1 : -1;
-    const stepTime = Math.abs(Math.floor(duration / range)) || 10;
-    const timer = setInterval(() => {
-      current += increment;
+    if (range === 0) {
+      obj.textContent = end.toLocaleString();
+      return;
+    }
+
+    obj.dataset.animRunning = 'true';
+    const startTime = performance.now();
+
+    function step(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing: easeOutQuart
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const current = Math.floor(start + range * easeOutQuart);
+      
       obj.textContent = current.toLocaleString();
-      if (current == end) {
-        clearInterval(timer);
+
+      if (progress < 1) {
+        obj._currentAnim = requestAnimationFrame(step);
+      } else {
+        obj.textContent = end.toLocaleString();
+        obj.dataset.animRunning = 'false';
+        obj._currentAnim = null;
       }
-    }, stepTime);
+    }
+
+    obj._currentAnim = requestAnimationFrame(step);
   }
 
   async function loadSystemStats(period = 'day') {
@@ -1283,7 +1326,7 @@
 
       if (activityChart) activityChart.destroy();
       
-      const canvasCtx = ctx.getContext('2d');
+      const canvasCtx = ctx.getContext ? ctx.getContext('2d') : ctx;
       activityChart = WanderChartFactory.line(ctx, labels, [
         {
           label: 'Người dùng',
@@ -1538,6 +1581,8 @@
 
   function renderUsers(users) {
     usersTbody.innerHTML = '';
+    const fragment = document.createDocumentFragment();
+
     users.forEach((u) => {
       const tr = document.createElement('tr');
       const date = u.createdAt ? new Date(u.createdAt).toLocaleDateString('vi-VN') : 'N/A';
@@ -1587,19 +1632,22 @@
             ${canEdit ? `<button class="btn-icon" data-edit-user="${u._id}" title="Sửa thông tin">✏️</button>` : ''}
             ${(currentAdmin.role === 'superadmin' && u.role === 'admin') ? `
               <button class="btn-icon" style="background:rgba(14,165,233,0.15); color:#0ea5e9; border:1px solid rgba(14,165,233,0.3);" 
-                      onclick="openAdminPermissionsEditor('${u._id}', '${(u.permissions || []).join(',')}')" 
+                      data-edit-perms="${u._id}" 
+                      data-perms="${(u.permissions || []).join(',')}"
                       title="Chỉnh sửa quyền hạn">🔑</button>
             ` : ''}
             ${(!u.isSuperAdmin && u._id !== currentAdmin.id) ? `
               <button class="btn-icon ${isSuspended ? 'btn--success' : ''}" 
                       style="font-size:0.9rem; padding:0.25rem 0.5rem; border-radius:6px; min-width:32px; background:${isSuspended ? 'rgba(74,222,128,0.15)' : 'rgba(245,158,11,0.15)'}; color:${isSuspended ? '#4ade80' : '#f59e0b'}; border:1px solid ${isSuspended ? 'rgba(74,222,128,0.3)' : 'rgba(245,158,11,0.3)'};"
-                      onclick="WanderUI.toggleUserStatus('${u._id}', '${u.status}')"
+                      data-toggle-status="${u._id}" 
+                      data-current-status="${u.status}"
                       title="${isSuspended ? 'Mở khóa tài khoản' : 'Khóa tài khoản (Tạm dừng)'}">
                 ${isSuspended ? '🔓' : '🔒'}
               </button>
               <button class="btn-icon" 
                       style="font-size:0.9rem; padding:0.25rem 0.5rem; border-radius:6px; min-width:32px; background:rgba(99,102,241,0.15); color:#6366f1; border:1px solid rgba(99,102,241,0.3);"
-                      onclick="WanderUI.resetPassword('${u._id}', '${u.displayName || u.name}')"
+                      data-reset-password="${u._id}" 
+                      data-user-name="${u.displayName || u.name}"
                       title="Reset mật khẩu">
                 🔑
               </button>
@@ -1614,7 +1662,7 @@
           </div>
         </td>
       `;
-      usersTbody.appendChild(tr);
+      fragment.appendChild(tr);
 
       const detailTr = document.createElement('tr');
       detailTr.className = 'detail-row';
@@ -1637,40 +1685,44 @@
                 <div style="display:flex; gap:0.5rem; align-items:center">
                   <span style="font-size:0.85rem; color:var(--admin-text-muted)">Hồ sơ hệ thống:</span>
                   <span style="padding:0.25rem 0.75rem; border-radius:6px; font-size:0.75rem; font-weight:600; 
-                               background:${u.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(248,113,113,0.1)'}; 
-                               color:${u.status === 'active' ? '#22c55e' : '#f87171'}; 
-                               border:1px solid ${u.status === 'active' ? 'rgba(34,197,94,0.2)' : 'rgba(248,113,113,0.2)'}">
+                                background:${u.status === 'active' ? 'rgba(34,197,94,0.1)' : 'rgba(248,113,113,0.1)'}; 
+                                color:${u.status === 'active' ? '#22c55e' : '#f87171'}; 
+                                border:1px solid ${u.status === 'active' ? 'rgba(34,197,94,0.2)' : 'rgba(248,113,113,0.2)'}">
                     ${u.status === 'active' ? 'Hợp lệ' : 'Đã khóa'}
                   </span>
                 </div>
                 <div style="display:flex; gap:0.5rem; align-items:center">
                   <span style="font-size:0.85rem; color:var(--admin-text-muted)">Trạng thái kết nối:</span>
                   <span style="padding:0.25rem 0.75rem; border-radius:6px; font-size:0.75rem; font-weight:600; 
-                               background:${isOnline ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)'}; 
-                               color:${isOnline ? '#22c55e' : '#94a3b8'}; 
-                               border:1px solid ${isOnline ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.1)'}">
+                                background:${isOnline ? 'rgba(34,197,94,0.1)' : 'rgba(255,255,255,0.05)'}; 
+                                color:${isOnline ? '#22c55e' : '#94a3b8'}; 
+                                border:1px solid ${isOnline ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.1)'}">
                     ${isOnline ? 'ĐANG TRỰC TUYẾN' : 'NGOẠI TUYẾN'}
                   </span>
                 </div>
 
                 <button class="btn btn--primary" 
-                        onclick="WanderUI.openUserActivity('${u.email}', '${(u.displayName || u.name || 'User').replace(/'/g, "\\'")}', '${(u.avatar || '').replace(/'/g, "\\'")}')" 
+                        data-user-activity="${u.email}"
+                        data-user-name="${(u.displayName || u.name || 'User').replace(/"/g, "&quot;")}"
+                        data-user-avatar="${(u.avatar || '')}"
                         style="margin-top:0.5rem; width:100%; max-width:220px; display:flex; justify-content:center; align-items:center; gap:0.5rem">
                   📜 Xem lịch sử hoạt động
                 </button>
                 <button class="btn btn--small" 
-                        data-reset-password="${u._id}"
+                        data-direct-reset-password="${u._id}"
                         data-portal="${u.role === 'business' ? 'business' : (['admin', 'superadmin'].includes(u.role) ? 'admin' : 'user')}"
                         style="margin-top:0.5rem; width:100%; max-width:220px; display:flex; justify-content:center; align-items:center; gap:0.5rem; background:rgba(245,158,11,0.1); color:#f59e0b; border:1px solid rgba(245,158,11,0.2)">
                   🔑 Đặt lại mật khẩu
                 </button>
                 <button class="btn btn--small" 
-                        onclick="WanderAdmin.contactUser('${u._id}', '${(u.displayName || u.name || '').replace(/'/g, "\\'")}')"
+                        data-contact-user="${u._id}"
+                        data-user-name="${(u.displayName || u.name || '').replace(/"/g, "&quot;")}"
                         style="margin-top:0.5rem; width:100%; max-width:220px; display:flex; justify-content:center; align-items:center; gap:0.5rem; background:rgba(56,189,248,0.1); color:#38bdf8; border:1px solid rgba(56,189,248,0.2)">
                   💬 Liên hệ trực tiếp
                 </button>
                 <button class="btn btn--small" 
-                        onclick="WanderAdmin.sendResetEmail('${u._id}', '${u.role === 'business' ? 'business' : (['admin', 'superadmin'].includes(u.role) ? 'admin' : 'user')}')"
+                        data-send-reset-email="${u._id}"
+                        data-portal="${u.role === 'business' ? 'business' : (['admin', 'superadmin'].includes(u.role) ? 'admin' : 'user')}"
                         style="margin-top:0.5rem; width:100%; max-width:220px; display:flex; justify-content:center; align-items:center; gap:0.5rem; background:rgba(99,102,241,0.1); color:#818cf8; border:1px solid rgba(99,102,241,0.2)">
                   ✉️ Gửi Email đặt lại MK
                 </button>
@@ -1685,33 +1737,117 @@
           </div>
         </td>
       `;
-      usersTbody.appendChild(detailTr);
+      fragment.appendChild(detailTr);
     });
+
+    usersTbody.appendChild(fragment);
+
 
     if (usersTbody && usersTbody.dataset.boundClick !== '1') {
       usersTbody.dataset.boundClick = '1';
       usersTbody.addEventListener('click', (e) => {
+        // Toggle detail row
         const toggleBtn = e.target.closest('[data-toggle-user]');
         if (toggleBtn) {
           const id = toggleBtn.dataset.toggleUser;
           const d = document.getElementById(`detail-user-${id}`);
-          d.classList.toggle('is-open');
-          toggleBtn.textContent = d.classList.contains('is-open') ? 'Thu gọn' : 'Xem chi tiết';
+          if (d) {
+            d.classList.toggle('is-open');
+            toggleBtn.textContent = d.classList.contains('is-open') ? 'Thu gọn' : 'Xem chi tiết';
+          }
           return;
         }
+
+        // Edit user
         const editBtn = e.target.closest('[data-edit-user]');
         if (editBtn) {
-          const user = usersData.find(x => x._id === editBtn.dataset.editUser);
+          const id = editBtn.dataset.editUser;
+          const user = usersData.find(x => x._id === id);
           if (user) openUserModal(user);
           return;
         }
-        const resetPassBtn = e.target.closest('[data-reset-password]');
-        if (resetPassBtn) {
-          const id = resetPassBtn.dataset.resetPassword;
-          const portal = resetPassBtn.dataset.portal || 'user';
-          WanderAdmin.resetUserPassword(id, portal);
+
+        // Toggle Status (Suspended/Active)
+        const statusBtn = e.target.closest('[data-toggle-status]');
+        if (statusBtn) {
+          const id = statusBtn.dataset.toggleStatus;
+          const currentStatus = statusBtn.dataset.currentStatus;
+          WanderUI.toggleUserStatus(id, currentStatus);
           return;
         }
+
+        // Reset Password
+        const resetBtn = e.target.closest('[data-reset-password]');
+        if (resetBtn) {
+          const id = resetBtn.dataset.resetPassword;
+          const name = resetBtn.dataset.userName;
+          WanderUI.resetPassword(id, name);
+          return;
+        }
+
+        // Direct Reset Password (WanderAdmin version)
+        const directResetBtn = e.target.closest('[data-direct-reset-password]');
+        if (directResetBtn) {
+          const id = directResetBtn.dataset.directResetPassword;
+          const portal = directResetBtn.dataset.portal || 'user';
+          if (window.WanderAdmin && window.WanderAdmin.resetUserPassword) {
+            window.WanderAdmin.resetUserPassword(id, portal);
+          }
+          return;
+        }
+
+        // impersonate
+        const impBtn = e.target.closest('[data-impersonate]');
+        if (impBtn) {
+          const id = impBtn.dataset.impersonate;
+          WanderUI.impersonateUser(id);
+          return;
+        }
+
+        // Permissions Editor
+        const permBtn = e.target.closest('[data-edit-perms]');
+        if (permBtn) {
+          const id = permBtn.dataset.editPerms;
+          const perms = permBtn.dataset.perms || '';
+          if (typeof window.openAdminPermissionsEditor === 'function') {
+            window.openAdminPermissionsEditor(id, perms);
+          }
+          return;
+        }
+
+        // User Activity
+        const activityBtn = e.target.closest('[data-user-activity]');
+        if (activityBtn) {
+          const email = activityBtn.dataset.userActivity;
+          const name = activityBtn.dataset.userName;
+          const avatar = activityBtn.dataset.userAvatar;
+          WanderUI.openUserActivity(email, name, avatar);
+          return;
+        }
+
+        // Contact User
+        const contactBtn = e.target.closest('[data-contact-user]');
+        if (contactBtn) {
+          const id = contactBtn.dataset.contactUser;
+          const name = contactBtn.dataset.userName;
+          if (window.WanderAdmin && window.WanderAdmin.contactUser) {
+            window.WanderAdmin.contactUser(id, name);
+          }
+          return;
+        }
+
+        // Send Reset Email
+        const sendEmailBtn = e.target.closest('[data-send-reset-email]');
+        if (sendEmailBtn) {
+          const id = sendEmailBtn.dataset.sendResetEmail;
+          const portal = sendEmailBtn.dataset.portal || 'user';
+          if (window.WanderAdmin && window.WanderAdmin.sendResetEmail) {
+            window.WanderAdmin.sendResetEmail(id, portal);
+          }
+          return;
+        }
+
+        // Delete user
         const deleteRowBtn = e.target.closest('[data-delete-user-row]');
         if (deleteRowBtn) {
           const id = deleteRowBtn.dataset.deleteUserRow;
@@ -1723,7 +1859,7 @@
                 if (res.success) {
                   WanderToast.success('Đã xóa tài khoản thành công');
                   await loadUsers();
-                  updateStats();
+                  if (typeof updateStats === 'function') updateStats();
                 } else {
                   WanderToast.error(res.message || 'Không thể xóa tài khoản');
                 }
@@ -1962,6 +2098,7 @@
       placesTbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Chưa có điểm đến nào</td></tr>';
       return;
     }
+    const fragment = document.createDocumentFragment();
     places.forEach(p => {
       const tr = document.createElement('tr');
       // Use a default image if broken or missing
@@ -1990,16 +2127,21 @@
           </button>
         </td>
       `;
-      placesTbody.appendChild(tr);
+      fragment.appendChild(tr);
     });
+    placesTbody.appendChild(fragment);
 
-    placesTbody.querySelectorAll('[data-edit-place]').forEach(btn => {
-      btn.addEventListener('click', function() {
-        const id = this.getAttribute('data-edit-place');
-        const place = placesData.find(x => x.id === id);
-        if (place) openPlaceModal(place);
+    if (placesTbody && placesTbody.dataset.boundClick !== '1') {
+      placesTbody.dataset.boundClick = '1';
+      placesTbody.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('[data-edit-place]');
+        if (editBtn) {
+          const id = editBtn.dataset.editPlace;
+          const place = placesData.find(x => x.id === id || x._id === id);
+          if (place) openPlaceModal(place);
+        }
       });
-    });
+    }
   }
 
   function applyPlaceFilters() {
@@ -2480,6 +2622,7 @@
       if(filtered.length === 0) {
         logsTbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Không có lịch sử</td></tr>';
       } else {
+        const fragment = document.createDocumentFragment();
         filtered.forEach(l => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
@@ -2488,14 +2631,16 @@
             <td><span style="color:var(--admin-accent)">${WanderUI.getFriendlyAction(l.action)}</span></td>
             <td><span class="dest-pill" style="font-size:0.7rem">${l.userRole || 'Visitor'}</span></td>
           `;
-          logsTbody.appendChild(tr);
+          fragment.appendChild(tr);
         });
+        logsTbody.appendChild(fragment);
       }
     }
 
     // 2. Fill mini logs in Overview
     if (miniLogsContainer) {
       miniLogsContainer.innerHTML = '';
+      const fragment = document.createDocumentFragment();
       logsData.slice(0, 5).forEach(l => {
         const item = document.createElement('div');
         item.className = 'log-item-minimal';
@@ -2513,8 +2658,9 @@
           <div class="log-text-min"><strong>${(l.userName || 'Admin').split('@')[0]}</strong> ${WanderUI.getFriendlyAction(l.action)}</div>
           <div class="log-time-min">${timeStr}</div>
         `;
-        miniLogsContainer.appendChild(item);
+        fragment.appendChild(item);
       });
+      miniLogsContainer.appendChild(fragment);
     }
   }
 
@@ -2555,7 +2701,7 @@
       });
 
       if (logManagerChart) logManagerChart.destroy();
-      const canvasCtx = ctx.getContext('2d');
+      const canvasCtx = ctx.canvas ? ctx : (ctx.getContext ? ctx.getContext('2d') : ctx);
       logManagerChart = WanderChartFactory.line(ctx, labels, [
         {
           label: 'Lượt truy cập',
@@ -3387,17 +3533,23 @@
 
     // 1. Search Menu Items
     const menuItems = [
-      { label: 'Tổng quan', tab: 'overview', icon: '📊', type: 'Menu' },
-      { label: 'Duyệt nội dung', tab: 'moderation', icon: '✅', type: 'Menu' },
+      { label: 'Tổng quan hệ thống', tab: 'overview', icon: '📊', type: 'Menu' },
+      { label: 'Biểu đồ & Thống kê', tab: 'analytics', icon: '📈', type: 'Menu' },
       { label: 'Người dùng', tab: 'users', icon: '👥', type: 'Menu' },
-      { label: 'Gửi thông báo', tab: 'broadcast', icon: '📢', type: 'Menu' },
-      { label: 'Nhật ký hệ thống', tab: 'logs', icon: '📋', type: 'Menu' },
+      { label: 'Quản trị viên', tab: 'admins', icon: '🔑', type: 'Menu' },
+      { label: 'Hỗ trợ khách hàng', tab: 'support', icon: '💬', type: 'Menu' },
       { label: 'Kho địa điểm', tab: 'places', icon: '📍', type: 'Menu' },
-      { label: 'Quản lý Admin', tab: 'admin-management', icon: '🔑', type: 'Menu' },
-      { label: 'Dữ liệu AI', tab: 'knowledge', icon: '🧠', type: 'Menu' }
+      { label: 'Duyệt nội dung', tab: 'moderation', icon: '✅', type: 'Menu' },
+      { label: 'Quản lý Chiến dịch', tab: 'campaigns', icon: '🚀', type: 'Menu' },
+      { label: 'Mã khuyến mãi', tab: 'vouchers', icon: '🎫', type: 'Menu' },
+      { label: 'Gửi thông báo', tab: 'broadcast', icon: '📢', type: 'Menu' },
+      { label: 'Trí tuệ AI Hub', tab: 'ai-intelligence', icon: '🧠', type: 'Menu' },
+      { label: 'Nhật ký hệ thống', tab: 'logs', icon: '📋', type: 'Menu' },
+      { label: 'Cấu hình chung', tab: 'system-config', icon: '⚙️', type: 'Menu' }
     ];
     menuItems.forEach(i => {
-      if (i.label.toLowerCase().includes(q)) results.push(i);
+      const labelLower = i.label.toLowerCase();
+      if (labelLower.includes(q) || q.includes(labelLower)) results.push(i);
     });
 
     // 2. Search Users
@@ -3769,7 +3921,7 @@
     }
 
     if (window.aiTrendChartInstance) window.aiTrendChartInstance.destroy();
-    const canvasCtx = ctx.getContext('2d');
+    const canvasCtx = ctx.canvas ? ctx : (ctx.getContext ? ctx.getContext('2d') : ctx);
     
     // Enhance datasets with factory styling
     chartData.datasets.forEach(ds => {
@@ -3895,14 +4047,11 @@
       });
     });
   }
-})();
 
-/* === ADMIN SETTINGS MANAGER (10 FEATURES) === */
-(function() {
-  document.addEventListener('DOMContentLoaded', () => {
-    const STORAGE_KEY = 'wander_admin_settings';
-    
-    // Default config
+  /* === ADMIN SETTINGS MANAGER (10 FEATURES) === */
+  const STORAGE_KEY = 'wander_admin_settings';
+  
+  // Default config
     const config = {
       theme: 'default',
       accentColor: '#3b82f6',
@@ -4094,7 +4243,6 @@
 
     // Init with slight delay to ensure DOM bindings
     setTimeout(applySettings, 100);
-  });
 
   // --- Security: Anti-Copy & Anti-Inspect ---
   (function() {
@@ -4136,7 +4284,7 @@
     }
   };
 
-  async function loadBroadcastHistory() {
+  window.loadBroadcastHistory = async function() {
     const tbody = document.getElementById('broadcast-history-tbody');
     if (!tbody) return;
     try {
@@ -4168,22 +4316,17 @@
     } catch (e) {}
   }
 
-  // Hook tab change
-  document.querySelectorAll('.sidebar-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.adminTab;
-      if (tab === 'broadcast') loadBroadcastHistory();
-      if (tab === 'admins') loadAdminsList();
-    });
-  });
+  // Tab change hooks are now handled by the main setupTabSwitching
 
-  async function loadAdminsList() {
+  window.loadAdminsList = async function() {
     const tbody = document.getElementById('admins-list-tbody');
     if (!tbody) return;
     try {
       const res = await apiFetch('/api/auth/admin/list');
       if (res.success) {
-        tbody.innerHTML = res.data.map(a => `
+        tbody.innerHTML = res.data
+          .filter(a => a.role !== 'superadmin')
+          .map(a => `
           <tr>
             <td>
               <div style="font-weight:600">${a.displayName || a.name}</div>
@@ -4196,9 +4339,12 @@
               <button class="btn btn--small btn--ghost" onclick="WanderAdmin.resetUserPassword('${a._id}', 'admin')">🔑 Pass</button>
             </td>
           </tr>
-        `).join('') || '<tr><td colspan="5" style="text-align:center;padding:2rem">Không có dữ liệu.</td></tr>';
+        `).join('') || '<tr><td colspan="5" style="text-align:center;padding:2rem">Không có dữ liệu quản trị viên.</td></tr>';
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error('Error loading admins list:', e);
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--admin-danger)">Lỗi tải dữ liệu. Vui lòng thử lại.</td></tr>';
+    }
   }
 
   WanderAdmin.cancelBroadcast = async (id) => {
