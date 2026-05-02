@@ -199,6 +199,25 @@ router.post('/places', businessAuth, upload.array('imageFile', 10), async (req, 
 // 3. Update own place (with optional image upload)
 router.put('/places/:id', businessAuth, upload.array('imageFile', 10), async (req, res) => {
   try {
+    // Validate required fields
+    const requiredFields = ['name', 'kind', 'region', 'address'];
+    const missingFields = requiredFields.filter(field => !req.body[field]);
+    if (missingFields.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Missing required fields: ${missingFields.join(', ')}` 
+      });
+    }
+    
+    // Validate kind field
+    const validKinds = ['diem-du-lich', 'tien-ich'];
+    if (!validKinds.includes(req.body.kind)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid kind. Must be one of: ${validKinds.join(', ')}` 
+      });
+    }
+
     const place = await Place.findOne({ id: req.params.id, ownerId: req.user.id });
     if (!place) return res.status(404).json({ success: false, message: 'Không tìm thấy địa điểm hoặc bạn không có quyền sửa.' });
 
@@ -319,7 +338,29 @@ router.get('/messages', businessAuth, async (req, res) => {
 router.post('/messages', businessAuth, async (req, res) => {
   try {
     const { customerId, text, serviceId, customerName } = req.body;
-    if (!text || !customerId) return res.status(400).json({ success: false, message: 'Missing data' });
+    
+    // Validate required fields
+    if (!text || !customerId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields: customerId and text are required' 
+      });
+    }
+    
+    // Validate text length
+    if (text.trim().length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Message text cannot be empty' 
+      });
+    }
+    
+    if (text.length > 1000) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Message text is too long (max 1000 characters)' 
+      });
+    }
 
     const newMessage = new BusinessMessage({
       businessId: req.user.id,

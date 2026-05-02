@@ -13,8 +13,8 @@ const Conversation = require('../models/Conversation');
 const Place = require('../models/Place');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'wander-viet-secret-key-123';
-const DEFAULT_ADMIN_EMAIL = 'admin@wanderviet.com';
-const DEFAULT_ADMIN_PASSWORD = 'password@2006';
+const DEFAULT_ADMIN_EMAIL = process.env.DEFAULT_ADMIN_EMAIL || 'admin@wanderviet.com';
+const DEFAULT_ADMIN_PASSWORD = process.env.DEFAULT_ADMIN_PASSWORD || 'password@2006';
 
 const signPortalToken = (account, portal, role) => {
   const accountId = account.customId || account.id || account._id.toString();
@@ -734,7 +734,7 @@ router.post('/forgot-password', async (req, res) => {
       }
     });
 
-    const resetUrl = `http://localhost:3000/reset-password.html?token=${token}&portal=${portal}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password.html?token=${token}&portal=${portal}`;
     const mailOptions = {
       to: account.email,
       from: process.env.EMAIL_USER,

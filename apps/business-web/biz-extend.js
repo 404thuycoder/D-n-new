@@ -12,10 +12,7 @@
            localStorage.getItem('wander_token'); 
   }
 
-  var API = '';
-  if (window.location.port === '3002' || window.location.port === '3001') {
-    API = 'http://localhost:3000';
-  }
+  var API = window.location.origin;
 
   function apiFetch(url, options) {
     var token = getToken();

@@ -13,7 +13,7 @@ Nền tảng du lịch cá nhân hóa cho người Việt. Gồm 3 cổng: **Use
 ### 2. Cài thư viện
 
 ```bash
-cd d:\VietFuture\travel-landing
+cd "f:\Dự án new\D-n-new"
 npm install
 ```
 
@@ -42,7 +42,7 @@ Sẽ tạo/cập nhật: `admin@wanderviet.com` / `admin123@`
 node server.js
 ```
 
-Server chạy tại: **http://localhost:5000**
+Server chạy tại: **http://localhost:50
 
 ---
 
@@ -70,7 +70,7 @@ Server chạy tại: **http://localhost:5000**
 ## Checklist luồng chính
 
 ### ✅ Đăng ký / Đăng nhập
-- [ ] Vào http://localhost:5000 → Bấm "Đăng nhập"
+- [ ] Vào http://localhost:3000 → Bấm "Đăng nhập"
 - [ ] Tab "Đăng ký (Khách)" → Nhập tên/email/mật khẩu → Submit → Avatar hiện trên header
 - [ ] Tab "Đăng ký (Doanh nghiệp)" → Submit → Redirect sang `/business.html`
 - [ ] Đăng nhập tài khoản đã có → Toast thành công
@@ -91,8 +91,8 @@ Server chạy tại: **http://localhost:5000**
 - [ ] Dịch vụ mới xuất hiện trên trang người dùng (API `/api/places`)
 
 ### ✅ Admin Dashboard
-- [ ] Vào http://localhost:5000/admin → Màn đăng nhập
-- [ ] Đăng nhập `admin@wanderviet.com` / `admin123@` → Dashboard hiện
+- [ ] Vào http://localhost:3001 → Màn đăng nhập Admin
+- [ ] Đăng nhập `admin@wanderviet.com` / `password@2006` → Dashboard hiện
 - [ ] Tab Users: xem danh sách, chỉnh sửa vai trò
 - [ ] Tab Places: xem / xóa địa điểm
 - [ ] Tab Logs: xem lịch sử hoạt động

@@ -365,11 +365,11 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
         ddBody.innerHTML = `
           <button type="button" class="user-dropdown-item" data-open-profile>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            Hồ sơ của tôi
+            Trang cá nhân
           </button>
-          <button type="button" class="user-dropdown-item" data-open-activity>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            Hoạt động
+          <button type="button" class="user-dropdown-item" data-open-settings>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Cài đặt hệ thống
           </button>
           <div style="border-top:1px solid rgba(255,255,255,0.05); margin:0.5rem 0;"></div>
           <button type="button" class="user-dropdown-item user-dropdown-item--danger" data-logout-btn>
@@ -455,27 +455,41 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
           <span class="visually-hidden">Mở menu</span>
         </button>
         
+        <div class="nav-overlay" data-nav-overlay></div>
         <nav id="site-nav" class="site-nav" data-nav>
+          <div class="site-nav__mobile-head">
+             <div class="site-nav__mobile-logo">
+                <span class="logo-mark">◈</span>
+                <div class="site-nav__mobile-title">
+                   <strong>WanderViệt</strong>
+                   <span>Khám phá • Trải nghiệm</span>
+                </div>
+             </div>
+          </div>
           <ul class="nav-list">
-             <li><a href="index.html" class="nav-link" data-link="home">🏠 Home</a></li>
-             <li><a href="index.html#destinations" class="nav-link" data-link="destinations">📍 Điểm đến</a></li>
-             <li><a href="business-services.html" class="nav-link" data-link="business" style="color:var(--accent-warm);">🏨 Doanh nghiệp</a></li>
-             <li><a href="planner.html" class="nav-link" data-link="ai-planner">🤖 AI Trợ lý</a></li>
+             <li><a href="index.html" class="nav-link" data-link="home">🏠 Trang chủ</a></li>
+             <li><a href="index.html#destinations" class="nav-link" data-link="destinations">🗺️ Điểm đến</a></li>
              <li><a href="my-trips.html" class="nav-link" data-link="my-trips">📅 Chuyến đi</a></li>
-             <li><a href="social-hub.html" class="nav-link" data-link="social">👥 Social</a></li>
+             <li><a href="planner.html" class="nav-link" data-link="ai-planner">🤖 AI Trợ lý</a></li>
+             <li><a href="social-hub.html" class="nav-link" data-link="social">👥 Cộng đồng</a></li>
              <li><a href="quests.html" class="nav-link" data-link="quests">🎯 Nhiệm vụ</a></li>
              <li><a href="leaderboard.html" class="nav-link" data-link="leaderboard">🏆 BXH</a></li>
+             <li><a href="business-services.html" class="nav-link" data-link="business">🏨 Doanh nghiệp</a></li>
           </ul>
+          
+          <div class="site-nav__mobile-footer">
+             <p>Mẹo nhỏ: Bạn có thể sử dụng AI Trợ lý để lên kế hoạch nhanh nhất.</p>
+          </div>
         </nav>
 
         <div class="header-right">
           <button type="button" class="btn-icon notif-btn-user" onclick="WanderUI.toggleNotificationDrawer()" aria-label="Thông báo">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             <span class="notif-badge" data-notif-badge style="display:none;"></span>
           </button>
           
           <button type="button" class="btn-icon" data-open-settings title="Cài đặt">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
           
           <div class="user-action-area" id="header-user-area">
@@ -499,6 +513,7 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
         </div>
       </div>
     `;
+
   }
 
   function initNavigation() {
@@ -536,21 +551,30 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
     // Mobile toggle
     const toggle = document.querySelector('[data-nav-toggle]');
     const nav = document.querySelector('[data-nav]');
+    const overlay = document.querySelector('[data-nav-overlay]');
     const header = document.querySelector('.site-header');
     
     if (toggle && nav) {
+      const closeMenu = () => {
+        nav.classList.remove('is-open');
+        if (header) header.classList.remove('is-nav-open');
+        toggle.setAttribute('aria-expanded', 'false');
+      };
+
       toggle.onclick = (e) => {
         e.preventDefault();
         const isOpen = nav.classList.toggle('is-open');
         if (header) header.classList.toggle('is-nav-open', isOpen);
         toggle.setAttribute('aria-expanded', isOpen);
       };
+
+      // Close on overlay click
+      if (overlay) {
+        overlay.onclick = () => closeMenu();
+      }
+
       // Close on link click
-      navLinks.forEach(l => l.addEventListener('click', () => {
-         nav.classList.remove('is-open');
-         if (header) header.classList.remove('is-nav-open');
-         toggle.setAttribute('aria-expanded', 'false');
-      }));
+      navLinks.forEach(l => l.addEventListener('click', closeMenu));
     }
   }
 
@@ -753,36 +777,14 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
           </div>
           <div class="modal__body settings-layout">
             <div class="settings-sidebar">
-              <button class="settings-nav-btn is-active" data-settings-tab="profile">👤 Hồ sơ</button>
-              <button class="settings-nav-btn" data-settings-tab="security">🔒 Bảo mật</button>
+              <button class="settings-nav-btn is-active" data-settings-tab="security">🔒 Bảo mật</button>
               <button class="settings-nav-btn" data-settings-tab="appearance">🌓 Giao diện</button>
               <button class="settings-nav-btn" data-settings-tab="notifications">🔔 Thông báo</button>
               <button class="settings-nav-btn" data-settings-tab="privacy">🔐 Quyền & Riêng tư</button>
             </div>
             <div class="settings-main">
-              <!-- Profile Panel -->
-              <div class="settings-panel is-active" data-settings-panel="profile">
-                <h3>Hồ sơ cá nhân</h3>
-                <form data-profile-form-v2>
-                  <div class="avatar-upload-wrap">
-                    <div class="avatar-upload-preview" data-avatar-preview>
-                      <img src="" alt="Ảnh đại diện" data-avatar-preview-img hidden />
-                      <span data-avatar-preview-initial>?</span>
-                    </div>
-                    <div class="avatar-upload-actions">
-                      <label class="avatar-file-label" for="avatar-file-input">Chọn ảnh</label>
-                      <input id="avatar-file-input" type="file" name="avatarFile" accept="image/*" data-avatar-file-input class="visually-hidden" />
-                      <button type="button" class="btn btn--ghost btn--small" data-avatar-remove>Xóa ảnh</button>
-                    </div>
-                  </div>
-                  <label class="field"><span class="field-label">Họ tên hiển thị</span><input type="text" name="displayName" /></label>
-                  <label class="field"><span class="field-label">Số điện thoại</span><input type="tel" name="phone" /></label>
-                  <label class="field"><span class="field-label">Ghi chú</span><textarea name="notes" rows="2"></textarea></label>
-                  <button type="submit" class="btn btn--primary btn--block">Lưu hồ sơ</button>
-                </form>
-              </div>
               <!-- Security Panel -->
-              <div class="settings-panel" data-settings-panel="security" hidden>
+              <div class="settings-panel is-active" data-settings-panel="security">
                 <h3>Tài khoản & Bảo mật</h3>
                 <form data-password-form-v2>
                   <label class="field"><span class="field-label">Mật khẩu cũ</span><input type="password" name="oldPassword" required /></label>
@@ -797,11 +799,11 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
                 <div class="appearance-grid">
                   <div class="theme-option" data-theme-set="light">
                     <div class="theme-preview theme-preview--light"></div>
-                    <span>Sáng (Light)</span>
+                    <span>Sáng</span>
                   </div>
                   <div class="theme-option is-active" data-theme-set="dark">
                     <div class="theme-preview theme-preview--dark"></div>
-                    <span>Tối (Dark)</span>
+                    <span>Tối</span>
                   </div>
                 </div>
                 <div style="margin-top:1.5rem">
@@ -1767,10 +1769,22 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
     }
 
     // 2. Profile / Settings Modal
-    const btnSettings = e.target.closest('[data-open-settings], [data-open-profile]');
+    const btnProfile = e.target.closest('[data-open-profile]');
+    if (btnProfile) {
+      toggleUserMenu(false);
+      if (window.location.pathname.includes('profile.html')) {
+        if (window.UserProfile && typeof window.UserProfile.toggleEditMode === 'function') {
+          window.UserProfile.toggleEditMode(true);
+          return;
+        }
+      }
+      window.location.href = 'profile.html?edit=true';
+      return;
+    }
+
+    const btnSettings = e.target.closest('[data-open-settings]');
     if (btnSettings) {
       toggleUserMenu(false);
-      const isProfile = e.target.closest('[data-open-profile]');
       const sess = getSession();
       const isAuth = sess && sess.email;
 
@@ -1778,11 +1792,10 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
       const settingsModal = document.getElementById('modal-settings');
       if (settingsModal) {
         const appearanceTab = document.querySelector('[data-settings-tab="appearance"]');
-        const profileTab = document.querySelector('[data-settings-tab="profile"]');
+        const securityTab = document.querySelector('[data-settings-tab="security"]');
         
-        if (isProfile && profileTab) profileTab.click();
-        else if (!isAuth && appearanceTab) appearanceTab.click();
-        else if (profileTab) profileTab.click();
+        if (!isAuth && appearanceTab) appearanceTab.click();
+        else if (securityTab) securityTab.click();
 
         // Populate profile data if auth
         if (isAuth) {

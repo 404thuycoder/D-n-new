@@ -255,7 +255,7 @@ function initMap() {
   State.map.on('dragstart', function () {
     if (State.isNavigating) {
       State.autoPan = false;
-      els.recenterBtn.hidden = false;
+      // Recenter button is now always visible
     }
   });
 }
@@ -900,7 +900,6 @@ async function smartGeocode(query, destName) {
       if (geocodeCache.cities[destName]) {
         cityData = geocodeCache.cities[destName];
       } else {
-        // Ưu tiên tìm Thành phố/Tỉnh để làm mốc chuẩn
         cityData = await queuedFetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent('Thành phố ' + destName + ', Vietnam')}&limit=1`);
         if (!cityData || cityData.length === 0) {
           cityData = await queuedFetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destName + ', Vietnam')}&limit=1`);
@@ -909,58 +908,54 @@ async function smartGeocode(query, destName) {
       }
     }
     
-    // Thử làm sạch query
     let cleanQuery = query.trim();
     if (cleanQuery.toLowerCase().includes('ở trung tâm thành phố')) {
       cleanQuery = cleanQuery.replace(/.*ở trung tâm thành phố/i, '').trim();
     }
-    let fullQuery = cleanQuery;
-    if (destName && !cleanQuery.toLowerCase().includes(destName.toLowerCase())) {
-      fullQuery = `${cleanQuery}, ${destName}`;
-    }
-    
-    // Nếu query có "Sân bay" mà thành phố không có sân bay, Nominatim dễ bay đi chỗ khác (như Sân bay Đà Nẵng)
-    // Giải pháp: Nếu query có "Sân bay", ta tìm thử, nếu kết quả > 50km so với trung tâm thì bỏ chữ "Sân bay" đi
-    let searchUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullQuery + ', Vietnam')}&limit=1`;
-    let res = await queuedFetch(searchUrl);
-    let data = res;
-    
-    if (data && data.length > 0) {
-      if (cityData && cityData.length > 0) {
-        const distToCity = MathU.calcDistance(parseFloat(data[0].lat), parseFloat(data[0].lon), parseFloat(cityData[0].lat), parseFloat(cityData[0].lon));
-        
-        // Nếu lệch quá 50km, thử tìm lại mà không có chữ "Sân bay" hoặc các từ gây nhiễu
-        if (distToCity > 50000) {
-           console.warn('Kết quả quá xa trung tâm. Thử tìm lại tối ưu hơn...');
-           let fallbackQuery = cleanQuery.replace(/sân bay|ga tàu|bến xe/gi, '').trim();
-           if (fallbackQuery && fallbackQuery !== cleanQuery) {
-             const res2 = await queuedFetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fallbackQuery + ', ' + destName + ', Vietnam')}&limit=1`);
-             if (res2 && res2.length > 0) {
-               data = res2;
-               fullQuery = fallbackQuery + ', ' + destName;
-             } else {
-               data = []; // Vẫn xa thì cho về trung tâm
-             }
-           } else {
-             data = [];
-           }
+
+    // CHIẾN LƯỢC TÌM KIẾM ĐA TẦNG (MULTI-STAGE)
+    const searchStages = [
+      // Stage 1: Tên địa điểm + Thành phố (Chính xác nhất)
+      destName ? `${cleanQuery}, ${destName}, Vietnam` : `${cleanQuery}, Vietnam`,
+      // Stage 2: Tên địa điểm + "du lịch" + Thành phố
+      destName ? `${cleanQuery} du lịch, ${destName}, Vietnam` : `${cleanQuery} du lịch, Vietnam`,
+      // Stage 3: Chỉ tên địa điểm + Vietnam (Mở rộng)
+      `${cleanQuery}, Vietnam`,
+      // Stage 4: Tìm kiếm rộng hơn nếu là Bến xe/Sân bay
+      cleanQuery.includes('Bến xe') ? `${cleanQuery}` : null
+    ].filter(s => s !== null);
+
+    let finalData = [];
+    for (const sQuery of searchStages) {
+      console.log(`[Geocode] Đang thử tầng: ${sQuery}`);
+      const res = await queuedFetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sQuery)}&limit=1`);
+      if (res && res.length > 0) {
+        // Kiểm tra độ tin cậy: Nếu có cityData, không được lệch quá xa (tránh nhầm tỉnh khác)
+        if (cityData && cityData.length > 0) {
+          const d = MathU.calcDistance(parseFloat(res[0].lat), parseFloat(res[0].lon), parseFloat(cityData[0].lat), parseFloat(cityData[0].lon));
+          if (d < 150000) { // Trong vòng 150km từ trung tâm tỉnh là chấp nhận được
+            finalData = res;
+            break; 
+          }
+        } else {
+          finalData = res;
+          break;
         }
       }
+    }
 
-      if (data.length > 0) {
-        geocodeCache.places[fullQuery] = data;
-        saveGeocodeCache();
-      }
+    if (finalData.length > 0) {
+      geocodeCache.places[cleanQuery] = finalData;
+      saveGeocodeCache();
+      return finalData;
     }
     
-    if (!data || data.length === 0) {
-      if (cityData && cityData.length > 0) {
-        speakMsg(`Dẫn tạm tới trung tâm ${destName}.`);
-        els.statusText.textContent = `Dẫn tạm tới trung tâm ${destName}.`;
-        return cityData;
-      }
+    // Nếu tất cả thất bại, dẫn về trung tâm
+    if (cityData && cityData.length > 0) {
+      speakMsg(`Không tìm thấy chính xác ${cleanQuery}, đang dẫn tới trung tâm ${destName}.`);
+      return cityData;
     }
-    return data;
+    return null;
   } catch(e) {
     console.error('smartGeocode err:', e);
     return null;
@@ -1726,14 +1721,42 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Nút Định tâm
+  // Nút Định tâm (Dual Mode Toggle)
   if (els.recenterBtn) {
     els.recenterBtn.addEventListener('click', function() {
-      State.autoPan = true;
-      if (State.userLoc) {
-        State.map.setView([State.userLoc.lat, State.userLoc.lng], State.map.getZoom());
+      if (!State.userLoc) return;
+      
+      // Chuyển đổi giữa chế độ 'user' và 'route'
+      if (State.recenterMode === 'user') {
+        // Mode 1: Zoom vào vị trí người dùng (Nhanh và mượt hơn)
+        State.autoPan = true;
+        State.map.flyTo([State.userLoc.lat, State.userLoc.lng], 18, {
+          animate: true,
+          duration: 0.8,
+          easeLinearity: 0.35
+        });
+        State.recenterMode = 'route';
+        this.title = "Xem toàn bộ lộ trình";
+        this.style.borderColor = "var(--primary)";
+      } else {
+        // Mode 2: Zoom ra toàn bộ lộ trình (Tối ưu padding và tốc độ)
+        State.autoPan = false;
+        if (State.targetLoc) {
+          const bounds = L.latLngBounds([
+            [State.userLoc.lat, State.userLoc.lng],
+            [State.targetLoc.lat, State.targetLoc.lng]
+          ]);
+          State.map.fitBounds(bounds, {
+            padding: [100, 100], // Tăng padding để đường đi không sát mép
+            animate: true,
+            duration: 0.7,
+            easeLinearity: 0.35
+          });
+        }
+        State.recenterMode = 'user';
+        this.title = "Định tâm vị trí của tôi";
+        this.style.borderColor = "rgba(255, 255, 255, 0.5)";
       }
-      this.hidden = true;
     });
   }
 

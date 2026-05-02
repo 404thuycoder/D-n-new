@@ -124,14 +124,10 @@
         <button id="recenter-btn" class="map-fab-main" title="Định tâm">🎯</button>
         
         <div class="map-side-group">
-          <button class="map-side-btn" id="map-style-toggle-custom" title="Vệ tinh">🗺️</button>
+          <button class="map-side-btn" id="map-style-toggle-custom" title="Thay đổi kiểu bản đồ">🗺️</button>
           <div class="side-divider"></div>
-          <button class="map-side-btn" id="traffic-toggle" title="Giao thông">🚦</button>
-          <button class="map-side-btn" onclick="window.quickSearch('fuel')" title="Xăng">⛽</button>
-          <button class="map-side-btn" onclick="window.quickSearch('restaurant')" title="Ăn uống">🍲</button>
-          <button class="map-side-btn" onclick="window.quickSearch('hotel')" title="Khách sạn">🏨</button>
-          <div class="side-divider"></div>
-          <button class="map-side-btn" onclick="window.quickSearch('hospital')" title="Cấp cứu/Y tế">🆘</button>
+          <button class="map-side-btn" id="map-zoom-in" title="Phóng to" onclick="if(window.State && window.State.map) window.State.map.zoomIn()">➕</button>
+          <button class="map-side-btn" id="map-zoom-out" title="Thu nhỏ" onclick="if(window.State && window.State.map) window.State.map.zoomOut()">➖</button>
         </div>
       </div>
 

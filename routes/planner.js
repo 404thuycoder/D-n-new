@@ -27,10 +27,14 @@ const fs = require('fs');
 const path = require('path');
 let placesContextList = "";
 try {
-  const content = fs.readFileSync(path.join(__dirname, '../apps/user-web/places-data.js'), 'utf-8');
-  const extractJson = content.substring(content.indexOf('['), content.lastIndexOf(']') + 1);
-  const placesData = eval(extractJson);
-  placesContextList = placesData.map(p => `- ${p.name} (${p.region}): ${p.text}`).join('\n');
+  const placesDataPath = path.join(__dirname, '../apps/user-web/places-data.js');
+  const content = fs.readFileSync(placesDataPath, 'utf-8');
+  const arrayMatch = content.match(/window\.WANDER_PLACES\s*=\s*(\[[\s\S]*\]);/);
+  if (arrayMatch) {
+    const arrayStr = arrayMatch[1];
+    const placesData = new Function('return ' + arrayStr)();
+    placesContextList = placesData.map(p => `- ${p.name} (${p.region}): ${p.text}`).join('\n');
+  }
 } catch (e) {
   console.error("Lỗi đọc places-data trong planner:", e);
 }
@@ -432,21 +436,29 @@ router.post('/smart-wizard', optionalAuth, async (req, res) => {
 Nhiệm vụ: Thu thập thông tin từ người dùng để tạo lịch trình du lịch cá nhân hóa.
 
 QUY TẮC CỐT LÕI:
-1. GOM NHÓM CÂU HỎI: Hỏi gộp các thông tin còn thiếu. Tập trung vào 3 nhóm mới:
+1. GOM NHÓM CÂU HỎI: Hãy hỏi theo trình tự logic để thấu hiểu khách:
+   - ƯU TIÊN: Bạn muốn dành tiền và thời gian vào đâu nhiều nhất? (Hoạt động mạo hiểm, Nghỉ ngơi thư giãn, Mua sắm, hay Tham quan di tích?)
    - CHỖ Ở: Bạn thích ở đâu? (Resort sang chảnh, Homestay ấm cúng, Hotel trung tâm, hay Cắm trại?)
    - ĂN UỐNG: Phong cách ẩm thực? (Món địa phương/Vỉa hè, Nhà hàng sang trọng, Buffet, hay Tự túc?)
-   - ƯU TIÊN: Bạn muốn dành tiền và thời gian vào đâu nhiều nhất? (Hoạt động mạo hiểm, Nghỉ ngơi thư giãn, Mua sắm, hay Tham quan di tích?)
+   - NHỊP ĐỘ: Bạn muốn chuyến đi thế nào? (Dày đặc/Năng suất, Vừa phải, hay Chậm rãi/Thảnh thơi?)
 2. TRÌNH BÀY: Dùng ngôn ngữ tự nhiên. Phản hồi xác nhận thông tin bằng CHỮ IN HOA để highlight.
 3. PHÂN TÍCH: Tự suy luận từ câu trả lời của khách để điền vào detectedData.
+4. UI OPTIONS: Luôn sử dụng "type": "multi_select" cho các nhóm chính để khách có thể chọn nhiều phương án cùng lúc.
 
 Cấu trúc JSON:
 {
   "detectedData": { ... },
   "nextStep": "objective" | "aggregate_info" | "ready",
-  "aiMessage": "Câu hỏi gợi mở về Chỗ ở, Ăn uống và Ưu tiên...",
+  "aiMessage": "Lời chào và câu hỏi dẫn dắt về Ưu tiên, Chỗ ở, Ăn uống và Nhịp độ...",
   "uiOptions": {
-    "type": "multi_select" | "single_select",
+    "type": "multi_select",
     "groups": [
+      { "id": "priority", "title": "Bạn ưu tiên dành thời gian vào đâu?", "options": [
+          { "id": "activity", "label": "Hoạt động trải nghiệm", "icon": "🧗" },
+          { "id": "relax", "label": "Nghỉ ngơi/Chill", "icon": "🧘" },
+          { "id": "shopping", "label": "Mua sắm/Giải trí", "icon": "🛍️" },
+          { "id": "culture", "label": "Văn hóa/Di tích", "icon": "🏛️" }
+      ]},
       { "id": "accommodation", "title": "Bạn muốn ở đâu?", "options": [
           { "id": "resort", "label": "Resort/Villa", "icon": "🏨" },
           { "id": "homestay", "label": "Homestay/Bungalow", "icon": "🏡" },
@@ -458,10 +470,10 @@ Cấu trúc JSON:
           { "id": "fine_dining", "label": "Nhà hàng sang trọng", "icon": "🍷" },
           { "id": "street_food", "label": "Ẩm thực đường phố", "icon": "🍢" }
       ]},
-      { "id": "priority", "title": "Bạn ưu tiên dành thời gian vào đâu?", "options": [
-          { "id": "activity", "label": "Hoạt động trải nghiệm", "icon": "🧗" },
-          { "id": "relax", "label": "Nghỉ ngơi/Chill", "icon": "🧘" },
-          { "id": "shopping", "label": "Mua sắm/Giải trí", "icon": "🛍️" }
+      { "id": "pace", "title": "Nhịp độ chuyến đi mong muốn?", "options": [
+          { "id": "fast", "label": "Dày đặc/Năng suất", "icon": "⚡" },
+          { "id": "moderate", "label": "Vừa phải", "icon": "🚶" },
+          { "id": "slow", "label": "Chậm rãi/Thảnh thơi", "icon": "🍃" }
       ]}
     ]
   }

@@ -37,18 +37,46 @@ document.addEventListener('DOMContentLoaded', function () {
     btnModeForm.addEventListener('click', () => {
       btnModeForm.classList.add('active');
       btnModeDiscovery.classList.remove('active');
-      document.getElementById('stepBasic').style.display = 'block';
+      document.getElementById('stepBasic').style.display = 'flex';
       document.getElementById('stepDiscovery').style.display = 'none';
+      document.getElementById('stepSmartWizard').style.display = 'none';
     });
     btnModeDiscovery.addEventListener('click', () => {
       btnModeDiscovery.classList.add('active');
       btnModeForm.classList.remove('active');
-      document.getElementById('stepDiscovery').style.display = 'block';
+      document.getElementById('stepDiscovery').style.display = 'flex';
       document.getElementById('stepBasic').style.display = 'none';
-      if (discoveryHistory.length === 0) {
-        addDiscoveryBubble("Chào bạn! Bạn đang phân vân không biết đi đâu? Hãy cho tôi biết ngân sách và sở thích (VD: 5 triệu đi đâu mát mẻ?), tôi sẽ gợi ý cho bạn nhé! ✨", "ai");
+      document.getElementById('stepSmartWizard').style.display = 'none';
+      
+      if (discoveryHistory.length === 0 && discoveryMessages.children.length === 0) {
+        addDiscoveryBubble("Chào bạn! Tôi là WanderAI. Hãy cho tôi biết ngân sách và sở thích, tôi sẽ gợi ý cho bạn nhé! ✨", "ai");
+        renderDiscoverySuggestions();
       }
     });
+
+  function renderDiscoverySuggestions() {
+    const chipsContainer = document.getElementById('discoveryChips');
+    if (!chipsContainer) return;
+    chipsContainer.innerHTML = '';
+    const suggestions = [
+      { id: 'low_budget', label: '5 triệu VNĐ', icon: '💰' },
+      { id: 'beach', label: 'Đi biển', icon: '🏖️' },
+      { id: 'mountain', label: 'Leo núi', icon: '🏔️' },
+      { id: 'cool', label: 'Chỗ nào mát mẻ?', icon: '❄️' },
+      { id: 'food', label: 'Thiên đường ăn uống', icon: '🍜' }
+    ];
+    
+    suggestions.forEach(s => {
+      const chip = document.createElement('button');
+      chip.className = 'chat-chip-premium';
+      chip.innerHTML = `<span class="chip-icon">${s.icon}</span> ${s.label}`;
+      chip.onclick = () => {
+        discoveryInput.value = s.label;
+        discoveryForm.dispatchEvent(new Event('submit'));
+      };
+      chipsContainer.appendChild(chip);
+    });
+  }
   }
 
   if (discoveryForm) {
@@ -134,19 +162,27 @@ document.addEventListener('DOMContentLoaded', function () {
     },
 
     startSmartWizardFromForm() {
-      this.data.destination = document.getElementById('dest').value;
-      this.data.days = parseInt(document.getElementById('days').value);
+      const dest = document.getElementById('dest').value.trim();
+      const days = parseInt(document.getElementById('days').value);
+      
+      if (!dest || isNaN(days)) {
+        if (window.WanderToast) WanderToast.error("Vui lòng điền đầy đủ thông tin");
+        else alert("Vui lòng điền đầy đủ thông tin");
+        return;
+      }
+
+      this.data.destination = dest;
+      this.data.days = days;
       this.data.budget = document.getElementById('budget').value;
       this.data.tripDate = document.getElementById('tripDate').value;
       this.data.companion = document.getElementById('companion').value;
-      this.data.objective = [document.getElementById('objective').value];
 
-      stepBasic.style.display = 'none';
+      document.getElementById('stepBasic').style.display = 'none';
       document.getElementById('stepDiscovery').style.display = 'none';
-      stepSmartWizard.style.display = 'block';
+      document.getElementById('stepSmartWizard').style.display = 'flex';
       this.dom.chatArea.innerHTML = '';
       this.history = [];
-      this.handleMessage(`Tôi muốn đi ${this.data.destination} trong ${this.data.days} ngày với ngân sách ${this.data.budget}. Tôi đi cùng ${this.data.companion} với mục tiêu ${this.data.objective[0]}. Hãy gợi ý tiếp các chi tiết khác.`);
+      this.handleMessage(`Tôi muốn đi ${this.data.destination} trong ${this.data.days} ngày. Hãy tư vấn thêm để hoàn thiện lịch trình.`);
     },
 
     async handleMessage(text) {
@@ -159,15 +195,17 @@ document.addEventListener('DOMContentLoaded', function () {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ message: text, currentData: this.data, history: this.history })
         });
+        
+        if (!response.ok) throw new Error("API Wizard Error");
+        
         const result = await response.json();
         if (result.success) {
           this.addBubble(result.aiMessage, 'ai');
           this.history.push({ role: 'user', content: text }, { role: 'assistant', content: result.aiMessage });
           if (result.detectedData) this.data = { ...this.data, ...result.detectedData };
           
-          // Xử lý hiển thị dựa trên bước tiếp theo
           if (result.nextStep === 'ready') {
-            this.renderOptions(null); // Xóa các options cũ
+            this.renderOptions(null);
             this.showConfirmation();
           } else if (result.uiOptions) {
             this.dom.confirmationArea.style.display = 'none';
@@ -177,7 +215,11 @@ document.addEventListener('DOMContentLoaded', function () {
             this.renderOptions(null);
           }
         }
-      } catch (error) { console.error(error); }
+      } catch (error) { 
+        console.error(error); 
+        this.addBubble("Rất tiếc, AI đang gặp chút trục trặc. Bạn có thể thử nhập lại hoặc nhấn nút bên dưới để lên lịch ngay với thông tin hiện có.", 'ai');
+        this.showConfirmation();
+      }
     },
 
     addBubble(text, role) {
@@ -185,12 +227,9 @@ document.addEventListener('DOMContentLoaded', function () {
       bubble.className = `chat-bubble ${role}`;
       if (role === 'ai') {
         let ft = text.trim();
-        // Xóa dấu phẩy thừa ở đầu nếu có
         if (ft.startsWith(',')) ft = ft.substring(1).trim();
-
-        ft = ft.replace(/(\d+ ĐẾN \d+ TRIỆU VNĐ)/gi, '<strong style="color: #06b6d4;">$1</strong>')
-               .replace(/(\d+ ngày)/gi, '<strong style="color: #06b6d4;">$1</strong>')
-               .replace(/(\d+ TR VNĐ)/gi, '<strong style="color: #06b6d4;">$1</strong>');
+        ft = ft.replace(/(\d+ ĐẾN \d+ TRIỆU VNĐ)/gi, '<strong style="color: var(--accent);">$1</strong>')
+               .replace(/(\d+ ngày)/gi, '<strong style="color: var(--accent);">$1</strong>');
         bubble.innerHTML = `<div class="chat-header"><span class="chat-icon">✨</span><span class="chat-name">WANDERAI</span></div><div class="chat-content">${ft}</div>`;
       } else { bubble.textContent = text; }
       this.dom.chatArea.appendChild(bubble);
@@ -209,28 +248,23 @@ document.addEventListener('DOMContentLoaded', function () {
       
       uiOptions.groups.forEach(group => {
         const label = document.createElement('p');
-        label.style = 'font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; margin-top: 1rem; font-weight: 700; text-transform: uppercase;';
+        label.className = 'group-label-premium';
         label.textContent = group.title;
         container.appendChild(label);
         
         const chips = document.createElement('div');
-        chips.className = 'planner-chat-chips';
-        chips.style = 'display: flex; flex-wrap: wrap; gap: 0.5rem;';
+        chips.className = 'planner-chat-chips-v2';
         
         group.options.forEach(opt => {
           const chip = document.createElement('button');
           chip.type = 'button';
-          chip.className = 'chat-chip';
-          if (this.isOptionSelected(group.id, opt.id)) chip.classList.add('is-selected');
-          
-          chip.innerHTML = `${opt.icon} ${opt.label}`;
-          
-          // Sử dụng addEventListener thay vì onclick để ổn định hơn
+          chip.className = 'chat-chip-premium';
+          if (this.isOptionSelected(group.id, opt.id)) chip.classList.add('active');
+          chip.innerHTML = `<span class="chip-icon">${opt.icon}</span> <span class="chip-text">${opt.label}</span>`;
           chip.addEventListener('click', (e) => {
             e.preventDefault();
             this.toggleOption(group.id, opt, chip, uiOptions.type);
           });
-          
           chips.appendChild(chip);
         });
         container.appendChild(chips);
@@ -240,25 +274,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'planner-btn';
-      btn.style.marginTop = '1.5rem';
-      btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
-      btn.textContent = 'Tôi đã chọn xong';
-      btn.addEventListener('click', () => this.handleMessage("Tôi đã chọn xong"));
+      btn.className = 'planner-btn main-action-small';
+      btn.innerHTML = '<span>Xác nhận & Tiếp tục</span> <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      btn.addEventListener('click', () => this.handleMessage("Tôi đã lựa chọn xong các yêu cầu trên"));
       this.dom.optionsArea.appendChild(btn);
-
-      const back = document.createElement('a');
-      back.className = 'back-link';
-      back.style.display = 'block';
-      back.style.textAlign = 'center';
-      back.style.marginTop = '1rem';
-      back.innerHTML = '← Nhập lại thông tin cơ bản';
-      back.onclick = (e) => { 
-        e.preventDefault(); 
-        stepSmartWizard.style.display = 'none'; 
-        document.getElementById('stepBasic').style.display = 'block'; 
-      };
-      this.dom.optionsArea.appendChild(back);
     },
 
     isOptionSelected(g, id) {
@@ -269,23 +288,27 @@ document.addEventListener('DOMContentLoaded', function () {
 
     toggleOption(g, opt, chip, type) {
       if (type === 'single_select') {
-        chip.parentElement.querySelectorAll('.chat-chip').forEach(c => c.classList.remove('is-selected'));
+        // Support both legacy and premium chip classes
+        const allChips = chip.parentElement.querySelectorAll('.chat-chip, .chat-chip-premium');
+        allChips.forEach(c => c.classList.remove('active', 'is-selected'));
+        
         this.data[g] = opt.id;
-        chip.classList.add('is-selected');
+        chip.classList.add('active');
       } else {
+        // Ensure data[g] is an array for multi_select
         if (!Array.isArray(this.data[g])) {
-           this.data[g] = this.data[g] ? [this.data[g]] : [];
+          this.data[g] = this.data[g] ? [this.data[g]] : [];
         }
+        
         const idx = this.data[g].indexOf(opt.id);
         if (idx > -1) {
           this.data[g].splice(idx, 1);
-          chip.classList.remove('is-selected');
+          chip.classList.remove('active', 'is-selected');
         } else {
           this.data[g].push(opt.id);
-          chip.classList.add('is-selected');
+          chip.classList.add('active');
         }
       }
-      console.log('Wizard Data Updated:', this.data);
     },
 
     showConfirmation() {
@@ -294,12 +317,12 @@ document.addEventListener('DOMContentLoaded', function () {
       this.dom.inputArea.style.display = 'none';
       
       const d = this.data;
-      const dateStr = d.tripDate ? new Date(d.tripDate).toLocaleDateString('vi-VN') : '---';
+      const dateStr = d.tripDate ? new Date(d.tripDate).toLocaleDateString('vi-VN') : 'Tùy chọn';
       
       this.dom.summary.innerHTML = `
         <div style="margin-bottom: 1.25rem; text-align: center;">
-          <h4 style="color: var(--accent, #10b981); margin-bottom: 0.25rem; font-size: 0.9rem; letter-spacing: 1px;">XÁC NHẬN HÀNH TRÌNH</h4>
-          <p style="font-size: 0.75rem; color: var(--text-muted);">AI đã sẵn sàng, hãy kiểm tra lại thông tin</p>
+          <h4 style="color: var(--accent); margin-bottom: 0.25rem; font-size: 0.9rem; letter-spacing: 1px; font-weight: 900;">XÁC NHẬN HÀNH TRÌNH</h4>
+          <p style="font-size: 0.75rem; color: var(--text-muted);">AI đã sẵn sàng thiết kế lịch trình cho bạn</p>
         </div>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
           <div class="summary-item">
@@ -318,14 +341,6 @@ document.addEventListener('DOMContentLoaded', function () {
             <span class="summary-icon">💰</span>
             <div class="summary-text"><p>NGÂN SÁCH</p><h4>${d.budget}</h4></div>
           </div>
-          <div class="summary-item" style="grid-column: span 2;">
-            <span class="summary-icon">👥</span>
-            <div class="summary-text"><p>ĐI CÙNG</p><h4>${d.companion}</h4></div>
-          </div>
-        </div>
-        <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.05); border-radius: 0.75rem; border: 1px solid rgba(16, 185, 129, 0.15);">
-          <p style="font-size: 0.7rem; color: var(--accent, #10b981); margin-bottom: 0.25rem; font-weight: 800; text-transform: uppercase;">Chi tiết phong cách</p>
-          <p style="font-size: 0.85rem; line-height: 1.4;">${d.style ? (Array.isArray(d.style) ? d.style.join(', ') : d.style) : 'AI tự đề xuất phong cách phù hợp nhất'}</p>
         </div>
       `;
     },
@@ -340,6 +355,7 @@ document.addEventListener('DOMContentLoaded', function () {
     resultContainer.style.display = 'none';
     refineBox.style.display = 'none';
     loader.style.display = 'flex';
+    
     try {
       const token = localStorage.getItem('wander_token');
       const res = await fetch('/api/planner/generate', {
@@ -347,46 +363,90 @@ document.addEventListener('DOMContentLoaded', function () {
         headers: { 'Content-Type': 'application/json', 'x-auth-token': token || '' },
         body: JSON.stringify({ ...data, tripDate: data.tripDate || '' })
       });
+      
+      if (!res.ok) throw new Error("API Generation Failed");
+      
       const json = await res.json();
       if (json.success) {
         currentItineraryId = json.itineraryId;
-        planHistory.push(json.plan);
-        currentPlanIndex = planHistory.length - 1;
+        planHistory = [json.plan];
+        currentPlanIndex = 0;
         renderVersionTabs();
         renderItinerary(json.plan, data.destination, data.days, data.tripDate);
         resultContainer.style.display = 'block';
         refineBox.style.display = 'block';
+      } else {
+        throw new Error(json.message || "Không thể tạo lịch trình");
       }
-    } catch(err) { console.error(err); }
+    } catch(err) { 
+      console.error(err);
+      placeholder.style.display = 'flex';
+      placeholder.innerHTML = `
+        <div style="padding: 2rem; color: #f43f5e;">
+          <h2 style="color: #f43f5e;">⚠️ Có lỗi xảy ra</h2>
+          <p>${err.message || 'Hệ thống AI đang quá tải. Vui lòng thử lại sau giây lát.'}</p>
+          <button class="planner-btn" onclick="location.reload()" style="margin-top: 1rem; width: auto;">Thử lại ngay</button>
+        </div>
+      `;
+    }
     finally { loader.style.display = 'none'; }
   }
 
   function renderItinerary(plan, dest, days, date) {
     const html = `
-      <div class="timeline-header">
-        <h2 class="activity-title" style="font-size: 1.5rem;">Hành trình: ${dest}</h2>
-        <p class="timeline-summary">${plan.tripSummary || plan.summary || ''}</p>
-        <div class="timeline-meta">
-          <div class="meta-card"><div class="meta-icon-wrapper">📅</div><div class="meta-content"><p>THỜI GIAN</p><h4>${days} Ngày</h4></div></div>
-          <div class="meta-card"><div class="meta-icon-wrapper">💰</div><div class="meta-content"><p>DỰ KIẾN</p><h4>${plan.estimatedCost || plan.totalEstimatedCost || '---'}</h4></div></div>
+      <div class="timeline-header-premium">
+        <div class="timeline-header-content">
+          <div class="destination-badge">📍 ${dest}</div>
+          <h2 class="main-itinerary-title">Hành trình khám phá ${days} ngày</h2>
+          <p class="timeline-summary-v2">${plan.tripSummary || plan.summary || 'Kế hoạch du lịch được tối ưu hóa bởi WanderAI.'}</p>
+        </div>
+        
+        <div class="itinerary-stats-grid">
+          <div class="stat-box">
+            <span class="stat-label">Thời gian</span>
+            <span class="stat-value">${days} Ngày</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Dự kiến chi phí</span>
+            <span class="stat-value">${plan.estimatedCost || plan.totalEstimatedCost || '---'}</span>
+          </div>
+          <div class="stat-box">
+            <span class="stat-label">Phong cách</span>
+            <span class="stat-value">Trải nghiệm</span>
+          </div>
         </div>
       </div>
-      <div class="timeline-body">
-        ${(plan.itinerary || []).map(day => {
-          const dayNum = (day.day || '').toString();
+
+      <div class="timeline-container-premium">
+        ${(plan.itinerary || []).map((day, idx) => {
+          const dayNum = day.day || (idx + 1);
           return `
-          <div class="timeline-day">
-            <div class="day-badge">Ngày ${dayNum}</div>
-            <div class="day-activities">
-              ${(day.activities || []).map(act => `
-                <div class="activity-card">
-                  <div class="activity-time">${act.time || '--:--'}</div>
-                  <h4 class="activity-title">${act.task || act.activity || act.name || ''}</h4>
-                  <p class="activity-location">📍 ${act.location || 'Địa điểm chưa rõ'}</p>
-                  <p class="activity-details">${act.description || act.desc || ''}</p>
-                  <div class="activity-cost">Dự kiến: ${act.cost || 'Miễn phí'}</div>
-                </div>
-              `).join('')}
+          <div class="itinerary-day-block" style="animation-delay: ${idx * 0.1}s">
+            <div class="day-indicator">
+              <div class="day-circle"><span>${dayNum.toString().replace(/Ngày /g, '')}</span></div>
+              <div class="day-line"></div>
+            </div>
+            <div class="day-content">
+              <div class="day-header-meta">
+                <h3>Ngày ${dayNum.toString().replace(/Ngày /g, '')}</h3>
+                <span class="day-subtitle">${day.theme || 'Khám phá & Trải nghiệm'}</span>
+              </div>
+              <div class="activities-list">
+                ${(day.activities || []).map(act => `
+                  <div class="premium-activity-card">
+                    <div class="activity-time-slot">${act.time || '--:--'}</div>
+                    <div class="activity-main-info">
+                      <h4 class="activity-name">${act.task || act.activity || act.name || ''}</h4>
+                      <div class="activity-location-tag">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                        <span>${act.location || 'Địa điểm chưa rõ'}</span>
+                      </div>
+                      <p class="activity-desc-v2">${act.description || act.desc || ''}</p>
+                      ${act.cost ? `<div class="activity-budget-pill">💰 ${act.cost}</div>` : ''}
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
             </div>
           </div>
           `;

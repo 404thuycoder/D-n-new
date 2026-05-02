@@ -15,10 +15,14 @@ router.post('/search', async (req, res) => {
     let placesData = [];
     let knownPlaceNames = "";
     try {
-      const content = fs.readFileSync(path.join(__dirname, '../apps/user-web/places-data.js'), 'utf-8');
-      const extractJson = content.substring(content.indexOf('['), content.lastIndexOf(']') + 1);
-      placesData = eval(extractJson);
-      knownPlaceNames = placesData.map(p => `${p.name} (${p.region})`).join(", ");
+      const placesDataPath = path.join(__dirname, '../apps/user-web/places-data.js');
+      const content = fs.readFileSync(placesDataPath, 'utf-8');
+      const arrayMatch = content.match(/window\.WANDER_PLACES\s*=\s*(\[[\s\S]*\]);/);
+      if (arrayMatch) {
+        const arrayStr = arrayMatch[1];
+        placesData = new Function('return ' + arrayStr)();
+        knownPlaceNames = placesData.map(p => `${p.name} (${p.region})`).join(", ");
+      }
     } catch (e) {
       console.error("Error reading places data:", e);
     }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hồ sơ cá nhân — WanderViệt</title>
+    <title>Trang cá nhân — WanderViệt</title>
     <link rel="stylesheet" href="global-tokens.css">
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="profile.css">
@@ -16,23 +16,27 @@
         <!-- Header Hồ sơ -->
         <div class="profile-header-section glass-card">
             <div class="profile-cover">
-                <button class="btn-edit-cover">📷 Chỉnh sửa ảnh bìa</button>
+                <button class="btn-edit-cover" id="btn-edit-cover">📷 Chỉnh sửa ảnh bìa</button>
             </div>
             <div class="container profile-main-info">
                 <div class="profile-avatar-large">
-                    <img src="default-avatar.png" id="user-avatar-big" alt="Avatar">
-                    <button class="btn-change-avatar">📷</button>
+                    <img src="assets/default-avatar.svg" id="user-avatar-big" alt="Avatar">
+                    <button class="btn-change-avatar" id="btn-change-avatar">📷</button>
                 </div>
                 <div class="profile-text-info">
                     <h1 id="user-display-name">Đang tải...</h1>
                     <p id="user-bio" class="user-bio">Chưa có tiểu sử.</p>
                     <div class="profile-meta">
-                        <span id="user-id-tag" class="glass-chip">ID: user...</span>
+                        <span id="user-id-tag" class="glass-chip">Mã số: user...</span>
                         <span id="user-rank-badge" class="rank-badge">Hạng Đồng I</span>
                     </div>
                 </div>
                 <div class="profile-header-actions">
                     <button class="btn btn--primary" id="edit-profile-btn">✏️ Chỉnh sửa hồ sơ</button>
+                    <div id="profile-social-btns" style="display:none;gap:8px;">
+                        <button class="btn btn--primary" id="btn-add-friend">➕ Kết bạn</button>
+                        <button class="btn btn--primary" id="btn-send-message" style="display:none;">💬 Nhắn tin</button>
+                    </div>
                 </div>
             </div>
             
@@ -46,6 +50,10 @@
         </div>
 
         <div class="container profile-content-layout">
+            <!-- Cột Phải: Nội dung Tab -->
+            <section class="profile-main-feed" id="profile-tab-content">
+                <div class="loading-shimmer">Đang tải nội dung...</div>
+            </section>
             <!-- Cột Trái: Thông tin giới thiệu -->
             <aside class="profile-aside">
                 <div class="glass-card info-card">
@@ -68,39 +76,13 @@
                 </div>
             </aside>
 
-            <!-- Cột Phải: Nội dung Tab -->
-            <section class="profile-main-feed" id="profile-tab-content">
-                <div class="loading-shimmer">Đang tải nội dung...</div>
-            </section>
+            <!-- Hidden Inputs for Media -->
+            <input type="file" id="avatar-input" accept="image/*" style="display:none;">
+            <input type="file" id="cover-input" accept="image/*" style="display:none;">
         </div>
     </main>
 
-    <!-- Modal Chỉnh sửa hồ sơ -->
-    <div class="modal" id="edit-profile-modal">
-        <div class="modal-content glass-card">
-            <div class="modal-header">
-                <h3>Chỉnh sửa hồ sơ</h3>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>Tên hiển thị</label>
-                    <input type="text" id="edit-name">
-                </div>
-                <div class="form-group">
-                    <label>Tiểu sử (Bio)</label>
-                    <textarea id="edit-bio" placeholder="Giới thiệu ngắn về bản thân..."></textarea>
-                </div>
-                <div class="form-group">
-                    <label>Số điện thoại</label>
-                    <input type="text" id="edit-phone">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn--primary btn--block" id="save-profile">Lưu thay đổi</button>
-            </div>
-        </div>
-    </div>
+
 
     <script src="SharedUI.js"></script>
     <script src="profile.js"></script>

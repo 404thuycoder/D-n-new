@@ -5,9 +5,9 @@
   --font-display: "Outfit", var(--font-sans);
   
   /* Radii & Effects */
-  --radius-sm: 8px;
-  --radius-md: 16px;
-  --radius-lg: 24px;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
   --radius-full: 9999px;
   --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -16,13 +16,13 @@
   --glass-bg: rgba(255, 255, 255, 0.05);
   --glass-blur: blur(12px);
 
-  /* Spacing */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem;
-  --space-6: 1.5rem;
-  --space-8: 2rem;
+  /* Spacing (Shrunken for High Density) */
+  --space-1: 0.15rem;
+  --space-2: 0.35rem;
+  --space-3: 0.5rem;
+  --space-4: 0.7rem;
+  --space-6: 1rem;
+  --space-8: 1.35rem;
   
   /* Animation */
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -39,14 +39,22 @@
   --warning: #d97706; /* Amber 600 */
   --danger: #dc2626; /* Red 600 */
   
-  --bg: #F8FAFC;
+  --bg: #F1F5F9; /* Softer light background */
   --bg-elevated: #FFFFFF;
   --text: #0F172A;
-  --text-muted: #334155;
+  --text-muted: #334155; /* Darker muted text for better contrast */
   --border: rgba(15, 23, 42, 0.12);
-  --surface-overlay: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(15, 23, 42, 0.05);
-  --glass-bg: rgba(255, 255, 255, 0.6);
+  --surface-overlay: rgba(255, 255, 255, 0.9);
+  --glass-border: rgba(15, 23, 42, 0.08);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  
+  /* Header Specific Tokens */
+  --header-bg: rgba(255, 255, 255, 0.95);
+  --header-border: rgba(15, 23, 42, 0.1);
+  --nav-link-color: #334155;
+  --nav-link-hover: #0F172A;
+  --nav-link-active: #0284c7;
+  --nav-link-bg-active: rgba(2, 132, 199, 0.08);
 }
 
 /* Dark Mode Overrides */
@@ -67,6 +75,14 @@
   --surface-overlay: rgba(9, 9, 11, 0.85);
   --glass-border: rgba(255, 255, 255, 0.1);
   --glass-bg: rgba(255, 255, 255, 0.03);
+
+  /* Header Specific Tokens */
+  --header-bg: rgba(4, 9, 20, 0.7);
+  --header-border: rgba(255, 255, 255, 0.05);
+  --nav-link-color: rgba(255, 255, 255, 0.6);
+  --nav-link-hover: #FFFFFF;
+  --nav-link-active: #FFFFFF;
+  --nav-link-bg-active: rgba(255, 255, 255, 0.08);
 }
 
 /* Utility: Loading Button */

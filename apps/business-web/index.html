@@ -174,7 +174,7 @@ td{padding:11px 16px;border-bottom:1px solid #f5f6fa}
       <h2>Tổng quan</h2>
       <p id="biz-breadcrumb">Quản lý và phát triển doanh nghiệp của bạn</p>
     </div>
-    <div class="date-chip">📅 01/05/2024 – 31/05/2024</div>
+    <div class="date-chip" id="date-range">📅 Đang tải...</div>
     <div class="search"><span>🔍</span><input placeholder="Tìm kiếm dịch vụ, đặt chỗ..."></div>
     <div class="bell">🔔<div class="bell-badge" id="nav-bell-badge">0</div></div>
     <div class="user-chip" onclick="window.bizLogout()" title="Đăng xuất">
@@ -305,6 +305,13 @@ td{padding:11px 16px;border-bottom:1px solid #f5f6fa}
     initSearchServices('search-wrap', 'tab-bar', 'service-grid');
     renderBookings(getBookings(), 'booking-table', { limit: 5 });
     initAddServiceForm('modal-root', '.btn-add');
+    
+    // Set current month date range
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const formatDate = (d) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    document.getElementById('date-range').textContent = `📅 ${formatDate(firstDay)} – ${formatDate(lastDay)}`;
   });
 </script>
 </body>

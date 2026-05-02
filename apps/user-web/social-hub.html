@@ -6,6 +6,7 @@
     <title>Cộng đồng WanderViệt — Mạng xã hội du lịch</title>
     <link rel="stylesheet" href="global-tokens.css">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="social-hub.css">
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body class="social-hub-page">
@@ -18,54 +19,68 @@
                 <div class="glass-card mini-profile">
                     <div class="profile-banner"></div>
                     <div class="profile-info-wrap">
-                        <img src="default-avatar.png" alt="Avatar" class="avatar-lg" id="mini-avatar">
+                        <img src="assets/default-avatar.svg" alt="Avatar" class="avatar-lg" id="mini-avatar">
                         <h3 id="mini-name">Người dùng</h3>
                         <p id="mini-rank">Hạng Đồng</p>
                     </div>
                     <div class="profile-stats">
-                        <div class="stat-item"><strong>12</strong><span>Bài viết</span></div>
-                        <div class="stat-item"><strong>48</strong><span>Bạn bè</span></div>
+                        <div class="stat-item"><strong id="stat-posts">0</strong><span>Bài viết</span></div>
+                        <div class="stat-item"><strong id="stat-friends">0</strong><span>Bạn bè</span></div>
                     </div>
                 </div>
 
                 <nav class="social-nav">
-                    <a href="social-hub.html" class="social-nav-item active">
-                        <i>🏠</i> <span>Bảng tin</span>
-                    </a>
-                    <a href="profile.html" class="social-nav-item">
-                        <i>👤</i> <span>Trang cá nhân</span>
-                    </a>
-                    <a href="history.html" class="social-nav-item">
-                        <i>📅</i> <span>Chuyến đi của tôi</span>
-                    </a>
-                    <a href="leaderboard.html" class="social-nav-item">
-                        <i>🎟️</i> <span>Ưu đãi & Voucher</span>
-                    </a>
-                    <a href="quests.html" class="social-nav-item">
-                        <i>🎯</i> <span>Thử thách</span>
-                    </a>
+                    <a href="#" class="social-nav-tab active" data-tab="feed"><i>🏠</i> <span>Bảng tin</span></a>
+                    <a href="#" class="social-nav-tab" data-tab="messages"><i>💬</i> <span>Tin nhắn</span></a>
+                    <a href="#" class="social-nav-tab" data-tab="friends"><i>👥</i> <span>Bạn bè</span></a>
+                    <a href="profile.html" class="social-nav-item"><i>👤</i> <span>Trang cá nhân</span></a>
+                    <a href="history.html" class="social-nav-item"><i>📅</i> <span>Chuyến đi</span></a>
+                    <a href="quests.html" class="social-nav-item"><i>🎯</i> <span>Thử thách</span></a>
                 </nav>
+
+                <!-- Search Users -->
+                <div class="glass-card search-card">
+                    <input type="text" id="user-search-input" placeholder="🔍 Tìm kiếm người dùng...">
+                    <div id="search-results"></div>
+                </div>
             </aside>
 
             <!-- Center Feed -->
-            <section class="social-feed">
-                <!-- Stories placeholder added via JS -->
+            <section class="social-center">
+                <!-- Tab: Feed -->
+                <div class="tab-panel" id="panel-feed">
+                    <div id="stories-container" class="stories-tray"></div>
 
-                <!-- Post Box -->
-                <div class="glass-card post-box" id="open-post-modal">
-                    <div class="post-box-upper">
-                        <img src="default-avatar.png" alt="Avatar" class="avatar-sm" id="post-avatar">
-                        <div class="post-input-trigger">Bạn đang nghĩ gì về chuyến đi tiếp theo?</div>
+                    <!-- Post Box -->
+                    <div class="glass-card post-box" id="open-post-modal">
+                        <div class="post-box-upper">
+                            <img src="assets/default-avatar.svg" alt="" class="avatar-sm" id="post-avatar">
+                            <div class="post-input-trigger">Bạn đang nghĩ gì về chuyến đi tiếp theo?</div>
+                        </div>
+                        <div class="post-box-lower">
+                            <div class="post-tool">📸 Ảnh/Video</div>
+                            <div class="post-tool">📍 Check-in</div>
+                            <div class="post-tool">😊 Cảm xúc</div>
+                        </div>
                     </div>
-                    <div class="post-box-lower">
-                        <div class="post-tool">📸 Ảnh/Video</div>
-                        <div class="post-tool">📍 Check-in</div>
-                        <div class="post-tool">😊 Cảm xúc</div>
+
+                    <div id="feed-container"></div>
+                </div>
+
+                <!-- Tab: Messages -->
+                <div class="tab-panel" id="panel-messages" style="display:none">
+                    <div class="glass-card" style="padding:1.5rem;">
+                        <h3 style="margin:0 0 1rem;">💬 Tin nhắn</h3>
+                        <div id="conversations-list"></div>
                     </div>
                 </div>
 
-                <div id="feed-container">
-                    <!-- Feed items injected here -->
+                <!-- Tab: Friends -->
+                <div class="tab-panel" id="panel-friends" style="display:none">
+                    <div class="glass-card" style="padding:1.5rem;">
+                        <h3 style="margin:0 0 1rem;">👥 Danh sách bạn bè</h3>
+                        <div id="friends-list-container"></div>
+                    </div>
                 </div>
             </section>
 
@@ -73,58 +88,63 @@
             <aside class="social-sidebar-right">
                 <div class="glass-card sidebar-widget">
                     <h4>Lời mời kết bạn</h4>
-                    <div id="friend-suggestions">
-                        <p class="text-muted">Không có lời mời mới.</p>
-                    </div>
+                    <div id="friend-suggestions"><p class="empty-state-text">Không có lời mời mới.</p></div>
+                </div>
+
+                <div class="glass-card sidebar-widget">
+                    <h4>Đề xuất kết bạn</h4>
+                    <div id="friend-recommendations"><p class="empty-state-text">Đang tải...</p></div>
                 </div>
 
                 <div class="glass-card sidebar-widget">
                     <h4>Xu hướng du lịch</h4>
                     <ul class="trending-list">
-                        <li>
-                            <div class="trend-item">
-                                <strong>#WanderViet2024</strong>
-                                <span>1.2k bài viết</span>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="trend-item">
-                                <strong>#PhuQuocIsland</strong>
-                                <span>850 bài viết</span>
-                            </div>
-                        </li>
-                        <li>
-                            <div class="trend-item">
-                                <strong>#HaGiangLoop</strong>
-                                <span>620 bài viết</span>
-                            </div>
-                        </li>
+                        <!-- Injected via SocialHub.renderTrending() -->
                     </ul>
                 </div>
 
                 <footer class="social-footer">
-                    <p>&copy; 2024 WanderViệt · <a href="#">Điều khoản</a> · <a href="#">Bảo mật</a></p>
+                    <p>&copy; 2026 WanderViệt · <a href="#">Điều khoản</a> · <a href="#">Bảo mật</a></p>
                 </footer>
             </aside>
         </div>
     </main>
 
-    <!-- Modal Post -->
-    <div class="modal" id="post-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10001; align-items:center; justify-content:center;">
-        <div class="modal-content glass-card" style="width:min(500px, 95vw); padding:0; overflow:hidden;">
-            <div class="modal-header" style="padding:1.5rem; border-bottom:1px solid rgba(255,255,255,0.05); display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0;">Tạo bài viết mới</h3>
-                <button class="close-modal" style="background:transparent; border:none; color:var(--text); font-size:1.5rem; cursor:pointer;">&times;</button>
+    <!-- Modal Đăng bài -->
+    <div class="modal" id="post-modal" hidden>
+        <div class="modal-backdrop"></div>
+        <div class="modal__inner" style="width:min(520px, 95vw); background: var(--bg-elevated); border: 1px solid rgba(255,255,255,0.1); border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+            <div class="modal__header">
+                <h3 class="modal__title">Tạo bài viết mới</h3>
+                <button class="modal__close" id="close-post-modal">&times;</button>
             </div>
-            <div class="modal-body" style="padding:1.5rem;">
-                <textarea id="post-content" placeholder="Chia sẻ trải nghiệm du lịch của bạn..." style="width:100%; min-height:120px; background:transparent; border:none; color:var(--text); font-size:1.1rem; outline:none; resize:none;"></textarea>
-                <div class="modal-tools" style="display:flex; gap:10px; margin-top:1rem;">
-                    <button id="tag-location" style="background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:8px 12px; border-radius:8px; color:var(--text); cursor:pointer;">📍 Gắn thẻ địa điểm</button>
+            <div class="modal__body">
+                <textarea id="post-content" placeholder="Chia sẻ trải nghiệm du lịch của bạn..." class="post-textarea"></textarea>
+                <div id="media-preview" class="media-preview-grid"></div>
+                <div class="post-modal-tools">
+                    <label class="tool-btn"><input type="file" id="media-upload" accept="image/*,video/*" multiple hidden>📸 Ảnh/Video</label>
+                    <button class="tool-btn" id="tag-location">📍 Gắn thẻ địa điểm</button>
                 </div>
             </div>
-            <div class="modal-footer" style="padding:1.5rem; border-top:1px solid rgba(255,255,255,0.05);">
+            <div style="padding:0 1.75rem 1.75rem;">
                 <button class="btn btn--primary btn--block" id="submit-post">Đăng bài</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Chat Drawer -->
+    <div class="chat-drawer" id="chat-drawer">
+        <div class="chat-drawer-header">
+            <div class="chat-target-info">
+                <img src="assets/default-avatar.svg" id="chat-target-avatar" class="avatar-sm" alt="">
+                <strong id="chat-target-name">Người dùng</strong>
+            </div>
+            <button class="modal__close" id="close-chat">&times;</button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-bar">
+            <input type="text" id="chat-input" placeholder="Nhập tin nhắn...">
+            <button id="chat-send-btn" class="btn btn--primary">➤</button>
         </div>
     </div>
 

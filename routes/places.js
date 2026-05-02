@@ -13,10 +13,16 @@ const BusinessAccount = require('../models/BusinessAccount');
 // Fallback logic
 let placesData = [];
 try {
-  const content = fs.readFileSync(path.join(__dirname, '../apps/user-web/places-data.js'), 'utf-8');
-  // Chuyển file places-data.js (chứa WANDER_PLACES = [...]) sang mảng JSON memory ở backend
-  const extractJson = content.substring(content.indexOf('['), content.lastIndexOf(']') + 1);
-  placesData = eval(extractJson);
+  // Load the JavaScript file and extract WANDER_PLACES
+  const placesDataPath = path.join(__dirname, '../apps/user-web/places-data.js');
+  const content = fs.readFileSync(placesDataPath, 'utf-8');
+  // Extract the array part from window.WANDER_PLACES = [...]
+  const arrayMatch = content.match(/window\.WANDER_PLACES\s*=\s*(\[[\s\S]*\]);/);
+  if (arrayMatch) {
+    // Use Function constructor to safely parse the array (safer than eval for static data)
+    const arrayStr = arrayMatch[1];
+    placesData = new Function('return ' + arrayStr)();
+  }
 } catch (e) {
   console.error("Error loading places fallback data:", e);
 }

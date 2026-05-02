@@ -30,11 +30,15 @@ const optionalAuth = (req, res, next) => {
 // Nạp danh sách điểm đến để hỗ trợ xác định vị trí (Cache để tăng tốc)
 let cachedPlaces = [];
 try {
-  const content = fs.readFileSync(path.join(__dirname, '../apps/user-web/places-data.js'), 'utf-8');
-  const extractJson = content.substring(content.indexOf('['), content.lastIndexOf(']') + 1);
-  cachedPlaces = eval(extractJson);
+  const placesDataPath = path.join(__dirname, '../apps/user-web/places-data.js');
+  const content = fs.readFileSync(placesDataPath, 'utf-8');
+  const arrayMatch = content.match(/window\.WANDER_PLACES\s*=\s*(\[[\s\S]*\]);/);
+  if (arrayMatch) {
+    const arrayStr = arrayMatch[1];
+    cachedPlaces = new Function('return ' + arrayStr)();
+  }
 } catch (e) {
-  console.error("Lỗi đọc places-data trong chat:", e);
+  console.error("Error loading places fallback data:", e);
 }
 
 router.post('/', optionalAuth, async (req, res) => {
