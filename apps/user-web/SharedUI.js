@@ -438,8 +438,12 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
     const isHistory = page.includes('history');
 
     function injectHeader() {
+      console.log("🛠️ WanderUI: Injecting Header...");
       const container = document.getElementById('header-container') || document.querySelector('[data-header]') || document.querySelector('.site-header') || document.querySelector('header');
-      if (!container) return;
+      if (!container) {
+        console.error("❌ WanderUI: Header container NOT found!");
+        return;
+      }
 
     container.innerHTML = `
       <div class="header-inner">
@@ -1868,16 +1872,86 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
     }
   });
 
-  // --- Init ---
-  injectHeader();
-  injectCommonComponents();
-  initNavigation();
-  updateNotificationBadge();
-  syncAuthUI();
-  initTheme();
-  initGlobalChatbot();
+  // --- Modal Utilities ---
+  function openAuthModal(tab = 'login') {
+    const modal = document.getElementById('modal-auth');
+    if (!modal) return;
+    modal.hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    const backdrop = document.querySelector('[data-modal-backdrop]');
+    if (backdrop) backdrop.hidden = false;
+    
+    // Switch to tab
+    const tabs = document.querySelectorAll('[data-auth-tab]');
+    tabs.forEach(t => {
+      const active = t.dataset.authTab === tab;
+      t.classList.toggle('is-active', active);
+    });
+    const panels = document.querySelectorAll('[data-auth-panel]');
+    panels.forEach(p => p.hidden = p.dataset.authPanel !== tab);
+  }
 
-  return { setTheme, toggleTheme, showToast, setButtonLoading, toggleNotificationDrawer, updateNotificationBadge, markAsRead, markAllAsRead, showLeaderboard, getRankBadgeHTML, getRankIcon, syncAuthUI, forceLogout, openPlaceDetail, openItineraryDetail, toggleUserMenu };
+  function confirm(title, message) {
+    return new Promise((resolve) => {
+      const modalHtml = `
+        <div id="temp-confirm-modal" class="modal" style="z-index: 11000;">
+          <div class="modal__inner" style="max-width: 400px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 24px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+            <div class="modal__header">
+              <h3 class="modal__title">${title}</h3>
+            </div>
+            <div class="modal__body">
+              <p style="color: var(--text-muted); line-height: 1.6;">${message}</p>
+            </div>
+            <div style="padding: 0 1.75rem 1.75rem; display: flex; gap: 10px;">
+              <button class="btn btn--outline flex-1" id="confirm-cancel">Hủy</button>
+              <button class="btn btn--danger flex-1" id="confirm-ok">Đồng ý</button>
+            </div>
+          </div>
+        </div>
+      `;
+      const div = document.createElement('div');
+      div.innerHTML = modalHtml;
+      document.body.appendChild(div);
+      
+      const modal = document.getElementById('temp-confirm-modal');
+      const backdrop = document.querySelector('[data-modal-backdrop]');
+      if (backdrop) backdrop.hidden = false;
+      modal.hidden = false;
+      
+      document.getElementById('confirm-cancel').onclick = () => {
+        modal.remove();
+        if (backdrop) backdrop.hidden = true;
+        resolve(false);
+      };
+      document.getElementById('confirm-ok').onclick = () => {
+        modal.remove();
+        if (backdrop) backdrop.hidden = true;
+        resolve(true);
+      };
+    });
+  }
+
+  // --- Init ---
+  const initAll = () => {
+    if (window.WanderUI_Initialized) return;
+    window.WanderUI_Initialized = true;
+    console.log("🚀 WanderUI Initializing components...");
+    injectHeader();
+    injectCommonComponents();
+    initNavigation();
+    updateNotificationBadge();
+    syncAuthUI();
+    initTheme();
+    initGlobalChatbot();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else {
+    initAll();
+  }
+
+  return { setTheme, toggleTheme, showToast, setButtonLoading, toggleNotificationDrawer, updateNotificationBadge, markAsRead, markAllAsRead, syncAuthUI, forceLogout, toggleUserMenu, openAuthModal, confirm };
 })());
 
 

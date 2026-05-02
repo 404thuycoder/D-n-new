@@ -103,7 +103,12 @@ const UserProfile = {
                 if (u.avatar) {
                     const avatarImg = document.getElementById('user-avatar-big');
                     avatarImg.src = u.avatar;
-                    avatarImg.onerror = () => avatarImg.src = 'assets/default-avatar.svg';
+                    avatarImg.onerror = () => {
+                        if (!avatarImg.dataset.errorHandled) {
+                            avatarImg.dataset.errorHandled = 'true';
+                            avatarImg.src = 'assets/default-avatar.svg';
+                        }
+                    };
                 }
                 if (u.cover) document.querySelector('.profile-cover').style.backgroundImage = `url(${u.cover})`;
                 const joinDate = new Date(u.createdAt);
@@ -517,7 +522,7 @@ const UserProfile = {
                     // Sync avatar if it's the current user
                     const displayAvatar = (this.isOwnProfile && post.userId === this.user._id) 
                         ? (this.user.avatar || 'assets/default-avatar.svg') 
-                        : (post.userAvatar || 'assets/default-avatar.svg');
+                        : (post.userAvatar || 'assets/default-avatar.svg');if(!dataet.erorHandled){this.dataset.errorHandled='true';this.sr}
 
                     return `
                         <div class="glass-card post-card" style="margin-bottom:1rem;padding:1rem;">

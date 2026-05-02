@@ -103,7 +103,19 @@
     try {
       localStorage.setItem(key, JSON.stringify(val));
     } catch (e) {
-      /* ignore quota */
+      if (e.name === 'QuotaExceededError') {
+        // Xóa dữ liệu cũ để giải phóng chỗ
+        localStorage.removeItem('wander_search_history');
+        localStorage.removeItem('wander_trip_draft');
+        try {
+          localStorage.setItem(key, JSON.stringify(val));
+        } catch (e2) {
+          console.error('Cannot save even after cleanup');
+          if (window.WanderUI && WanderUI.showToast) {
+            WanderUI.showToast('Bộ nhớ trình duyệt đầy, đã xóa dữ liệu cũ', 'warning');
+          }
+        }
+      }
     }
   }
   function normalize(s) {
@@ -972,16 +984,14 @@
   }
   function renderSkeletons() {
     if (!destGrid) return;
-    destGrid.innerHTML = "";
-    for (var i = 0; i < 6; i++) {
-      var s = document.createElement("div");
-      s.className = "skeleton-card";
-      s.innerHTML = '<div class="skeleton-img skeleton"></div>' +
-                    '<div class="skeleton-title skeleton"></div>' +
-                    '<div class="skeleton-text skeleton"></div>' +
-                    '<div class="skeleton-text skeleton" style="width:50%"></div>';
-      destGrid.appendChild(s);
-    }
+    destGrid.innerHTML = '<div class="skeleton-cards">' +
+      '<div class="skeleton-card"></div>' +
+      '<div class="skeleton-card"></div>' +
+      '<div class="skeleton-card"></div>' +
+      '<div class="skeleton-card"></div>' +
+      '<div class="skeleton-card"></div>' +
+      '<div class="skeleton-card"></div>' +
+      '</div>';
   }
 
   function renderDestCards() {
@@ -2311,6 +2321,27 @@
   if (form && statusEl) {
     form.addEventListener("submit", function (e) {
       e.preventDefault();
+      
+      // Validate email if not anonymous
+      if (!chkAnon || !chkAnon.checked) {
+        var emailVal = emailInput ? emailInput.value.trim() : "";
+        if (!emailVal || !emailVal.includes('@') || !emailVal.includes('.')) {
+          statusEl.textContent = "✖ Email không hợp lệ";
+          statusEl.classList.add("is-error");
+          if (window.WanderUI) WanderUI.showToast('Email không hợp lệ', 'error');
+          return;
+        }
+      }
+      
+      // Validate message
+      var messageVal = form.querySelector('textarea[name="message"]').value.trim();
+      if (messageVal.length < 10) {
+        statusEl.textContent = "✖ Nội dung quá ngắn (tối thiểu 10 ký tự)";
+        statusEl.classList.add("is-error");
+        if (window.WanderUI) WanderUI.showToast('Nội dung quá ngắn', 'error');
+        return;
+      }
+      
       statusEl.textContent = "Đang gửi…";
       statusEl.classList.remove("is-success", "is-error");
       var fd = new FormData(form);

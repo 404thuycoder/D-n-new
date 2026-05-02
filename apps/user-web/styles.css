@@ -92,6 +92,12 @@ a:hover {
   text-decoration: underline;
 }
 
+[data-header]:empty, #header-container:empty, .site-header:empty {
+  visibility: visible !important;
+  background: var(--header-bg) !important;
+  min-height: 60px !important;
+}
+
 .site-header {
   position: fixed;
   top: 0;

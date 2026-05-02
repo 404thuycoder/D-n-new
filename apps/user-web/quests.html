@@ -611,7 +611,7 @@
         if (isClaimed) {
           actionHtml = '<span style="color:#10b981; font-weight:800; font-size:0.85rem">✓ Đã nhận</span>';
         } else if (done) {
-          actionHtml = '<button class="btn-quest-action btn-claim-main" style="background:#10b981;color:#fff;border-color:#10b981;" onclick="claimQuest(this, \'' + q.id + '\', ' + q.xp + ')">🎁 Nhận</button>';
+          actionHtml = '<button class="btn-quest-action btn-claim-main" style="background:#10b981;color:#fff;border-color:#10b981;" data-quest-claim data-quest-id="' + q.id + '" data-quest-xp="' + q.xp + '">🎁 Nhận</button>';
         } else if (q.link === '#') {
           actionHtml = '<button class="btn-quest-action" data-open-profile>🎯 Làm nhiệm vụ</button>';
         } else {
@@ -743,6 +743,16 @@
         tab.classList.add('is-active');
         loadPage();
       });
+    });
+
+    // Event delegation for quest claim buttons
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest('[data-quest-claim]');
+      if (btn) {
+        var questId = btn.getAttribute('data-quest-id');
+        var questXp = parseInt(btn.getAttribute('data-quest-xp'));
+        claimQuest(btn, questId, questXp);
+      }
     });
 
     window.claimQuest = function(btn, id, xp) {

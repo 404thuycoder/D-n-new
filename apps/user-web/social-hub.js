@@ -8,7 +8,10 @@ const SocialHub = {
     init: async function() {
         console.log("📖 Social Hub v2 Initializing...");
         const token = localStorage.getItem('wander_token');
-        if (!token) { alert("Vui lòng đăng nhập!"); window.location.href = "index.html#auth"; return; }
+        if (!token) {
+            this.showGuestLanding();
+            return;
+        }
         await this.loadUserProfile();
         await this.fetchFeed();
         this.renderStories();
@@ -65,7 +68,7 @@ const SocialHub = {
         if (!container) return;
         container.innerHTML = `
             <div class="story-card create-story" onclick="document.getElementById('post-modal').removeAttribute('hidden')">
-                <div class="story-thumb" style="background-image: url('${this.user?.avatar || 'assets/assets/defg'}')sv></div>
+                <div class="story-thumb" style="background-image: url('${this.user?.avatar || 'assets/assets/defg'}')"></div>
                 <div class="story-add">+</div>
                 <span>Tạo tin</span>
             </div>
@@ -98,7 +101,7 @@ const SocialHub = {
         const isOwner = post.userId === this.user?._id || post.userId?.toString() === this.user?._id;
         const commentsHtml = (post.comments || []).slice(-3).map(c => `
             <div class="comment-item">
-                <img src="${c.userAvatar || 'assets/default-avatar.svg'}" class="comment-avatar" alt="" onerror="this.src='assets/default-avatar.svg'">
+                <img src="${c.userAvatar || 'assets/default-avatar.svg'}" class="comment-avatar" alt="" onerror="if(!this.dataset.errorHandled){this.dataset.errorHandled='true';this.src='assets/default-avatar.svg'}">
                 <div class="comment-body"><strong>${c.userName}</strong> ${c.text}</div>
             </div>
         `).join('');
@@ -107,7 +110,7 @@ const SocialHub = {
             <div class="glass-card post-card" data-post-id="${post._id}">
                 <div class="post-header">
                     <div class="post-user" onclick="SocialHub.viewProfile('${post.userId}')">
-                        <img src="${post.userAvatar || 'assets/default-avatar.svg'}" alt="" class="avatar-sm" onerror="this.src='assets/default-avatar.svg'">
+                        <img src="${post.userAvatar || 'assets/default-avatar.svg'}" alt="" class="avatar-sm" onerror="if(!this.dataset.errorHandled){this.dataset.errorHandled='true';this.src='assets/default-avatar.svg'}">
                         <div>
                             <h4>${post.userName}</h4>
                             <span class="post-time">${this.formatTime(post.createdAt)}${post.location?.name ? ' · 📍' + post.location.name : ''}</span>
@@ -345,7 +348,12 @@ const SocialHub = {
     },
 
     deletePost: async function(postId) {
-        if (!confirm("Bạn có chắc muốn xóa bài viết này?")) return;
+        if (!window.WanderUI || !WanderUI.confirm) {
+            if (!confirm("Bạn có chắc muốn xóa bài viết này?")) return;
+        } else {
+            const ok = await WanderUI.confirm("Xóa bài viết", "Bạn có chắc chắn muốn xóa bài viết này không? Hành động này không thể hoàn tác.");
+            if (!ok) return;
+        }
         try {
             await fetch(`/api/social/posts/${postId}`, { method: 'DELETE', headers: { 'x-auth-token': localStorage.getItem('wander_token') } });
             await this.fetchFeed();
@@ -369,6 +377,26 @@ const SocialHub = {
         overlay.onclick = (e) => { if (e.target.tagName !== 'IMG') overlay.remove(); };
         document.body.appendChild(overlay);
         setTimeout(() => overlay.classList.add('active'), 10);
+    },
+
+    // ========== GUEST STATE HANDLING ==========
+    showGuestLanding: function() {
+        const main = document.querySelector('.social-main');
+        if (!main) return;
+        main.innerHTML = `
+            <div class="container" style="max-width: 800px; padding: 6rem 1rem; text-align: center;">
+                <div class="glass-panel" style="padding: 4rem 2rem; border-radius: 32px;">
+                    <h1 style="font-size: 2.5rem; margin-bottom: 1rem; font-family: var(--font-display);">👋 Chào mừng đến với Cộng đồng</h1>
+                    <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 2.5rem; line-height: 1.6;">
+                        Hãy đăng nhập để kết nối với hàng nghìn du khách, chia sẻ trải nghiệm và nhận những gợi ý du lịch độc quyền từ cộng đồng WanderViệt.
+                    </p>
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn--primary btn--large" onclick="WanderUI.openAuthModal('login')">Đăng nhập ngay</button>
+                        <button class="btn btn--outline btn--large" onclick="WanderUI.openAuthModal('register')">Tạo tài khoản mới</button>
+                    </div>
+                </div>
+            </div>
+        `;
     },
 
     // ========== TRENDING ==========
@@ -582,7 +610,7 @@ const SocialHub = {
             if (data.success && data.data.length > 0) {
                 container.innerHTML = data.data.map(u => `
                     <div class="friend-request-card">
-                        <img src="${u.avatar || 'assets/default-avatar.svg'}" class="avatar-sm" onerror="this.src='assets/default-avatar.svg'" onclick="SocialHub.viewProfile('${u._id}')" style="cursor:pointer">
+                        <img src="${u.avatar || 'assets/default-avatar.svg'}" class="avatar-sm" onerror="if(!this.dataset.errorHandled){this.dataset.errorHandled='true';this.src='assets/default-avatar.svg'}" onclick="SocialHub.viewProfile('${u._id}')" style="cursor:pointer">
                         <div class="friend-info">
                             <strong>${u.displayName || u.name}</strong>
                             <span>Hạng ${u.rank || 'Đồng'} · ${u.points || 0} XP</span>
