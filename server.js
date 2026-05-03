@@ -80,6 +80,15 @@ const startPortals = () => {
     [{ p: 3001, d: 'apps/admin-web' }, { p: 3002, d: 'apps/business-web' }].forEach(config => {
         const pApp = express();
         pApp.use(cors({ origin: true, credentials: true }));
+        
+        // Fix cache issues
+        pApp.use((req, res, next) => {
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            next();
+        });
+
         pApp.use('/api/', (req, res) => { req.url = '/api/' + req.url.replace(/^\//, ''); proxy(req, res); });
         pApp.use('/uploads/', (req, res) => { req.url = '/uploads/' + req.url.replace(/^\//, ''); proxy(req, res); });
         pApp.use(express.static(path.join(__dirname, config.d)));

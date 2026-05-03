@@ -934,7 +934,7 @@
               break;
             case 'system-config': loadSystemConfig(); break;
             case 'ai-intelligence': setupAIHub(); break;
-            case 'support': setupSupportChat(); break;
+            case 'support': await loadFeedbacks(); break;
           }
         }
       });
@@ -1024,6 +1024,88 @@
         `).join('');
         // Double it for seamless loop
         container.innerHTML = `<div class="stream-wrapper">${streamHtml}${streamHtml}</div>`;
+        
+        // NEW: Update global logsData so notification bell stays current
+        logsData = json.data;
+        
+        // NEW: Update notification badge count if there are "new" feedback items
+        const feedbackLogs = logsData.filter(l => (l.action === 'FEEDBACK_SUBMITTED' || l.action === 'FEEDBACK_REPLY') && (Date.now() - new Date(l.timestamp).getTime() < 5 * 60 * 1000));
+        const badge = document.querySelector('[data-notif-badge]');
+        if (badge) {
+          if (feedbackLogs.length > 0) {
+            badge.textContent = feedbackLogs.length;
+            badge.style.display = 'block';
+            // Subtle pulse for new notifications
+            badge.style.animation = 'pulse-red 2s infinite';
+          } else {
+            badge.style.display = 'none';
+          }
+        }
+      }
+      
+      // Auto-refresh support feedbacks if tab is active
+      const activeTabBtn = document.querySelector('.sidebar-btn.is-active');
+      if (activeTabBtn && (activeTabBtn.dataset.adminTab === 'support' || activeTabBtn.dataset.adminTab === 'feedbacks')) {
+        await loadFeedbacks(true);
+        if (currentSupportChatId) {
+          // If a chat is currently open, refresh its messages too
+          const fb = feedbacksData.find(f => f._id === currentSupportChatId);
+                if (fb) {
+                  const messagesEl = document.getElementById('support-chat-messages');
+                  if (messagesEl) {
+                     const currentMsgCount = (fb.message ? 1 : 0) + (fb.replies ? fb.replies.length : 0);
+                     const displayedCount = messagesEl.querySelectorAll('.msg-item').length;
+                     
+                     if (currentMsgCount !== displayedCount) {
+                        // Re-render messages
+                        const isAtBottom = messagesEl.scrollHeight - messagesEl.scrollTop <= messagesEl.clientHeight + 50;
+                        
+                        let html = '';
+                        
+                        html += `
+                          <div class="msg-item" style="display:flex; align-items:flex-start; margin-bottom:0.75rem;">
+                            <div style="max-width:65%; word-break:break-word;">
+                              <div style="font-size:0.72rem; color:var(--admin-text-muted); margin-bottom:4px;">${fb.name} (Khách)</div>
+                              <div style="background:rgba(255,255,255,0.07); padding:10px 14px; border-radius:4px 12px 12px 12px; font-size:0.88rem; line-height:1.5; word-break:break-word; border:1px solid rgba(255,255,255,0.08);">
+                                ${fb.message}
+                                ${fb.image ? `<div style="margin-top:8px;"><img src="${fb.image}" style="max-width:100%; border-radius:6px; max-height:180px; object-fit:cover;" /></div>` : ''}
+                              </div>
+                            </div>
+                          </div>
+                        `;
+        
+                        if (fb.replies) {
+                          fb.replies.forEach(r => {
+                            const isAdmin = r.senderRole === 'admin' || r.senderRole === 'superadmin';
+                            const timeStr = new Date(r.createdAt).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+                            html += isAdmin ? `
+                              <div class="msg-item" style="display:flex; justify-content:flex-end; margin-bottom:0.75rem;">
+                                <div style="max-width:65%; word-break:break-word;">
+                                  <div style="font-size:0.72rem; color:#a5b4fc; margin-bottom:4px; text-align:right;">${r.senderName} • ${timeStr}</div>
+                                  <div style="background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; padding:10px 14px; border-radius:12px 4px 12px 12px; font-size:0.88rem; line-height:1.5; word-break:break-word; box-shadow:0 4px 12px rgba(99,102,241,0.3);">
+                                    ${r.content}
+                                  </div>
+                                </div>
+                              </div>
+                            ` : `
+                              <div class="msg-item" style="display:flex; align-items:flex-start; margin-bottom:0.75rem;">
+                                <div style="max-width:65%; word-break:break-word;">
+                                  <div style="font-size:0.72rem; color:var(--admin-text-muted); margin-bottom:4px;">${r.senderName} • ${timeStr}</div>
+                                  <div style="background:rgba(255,255,255,0.07); color:#fff; padding:10px 14px; border-radius:4px 12px 12px 12px; font-size:0.88rem; line-height:1.5; word-break:break-word; border:1px solid rgba(255,255,255,0.08);">
+                                    ${r.content}
+                                  </div>
+                                </div>
+                              </div>
+                            `;
+                          });
+                        }
+                        
+                        messagesEl.innerHTML = html;
+                        if (isAtBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
+                     }
+                  }
+                }
+        }
       }
     } catch (e) {}
   }
@@ -2393,122 +2475,239 @@
     });
   }
 
+  let currentSupportTab = 'user'; // 'user' or 'business'
+  let currentSupportChatId = null;
+
   async function loadFeedbacks(silent = false) {
-    const openDetailIds = Array.from(document.querySelectorAll('.detail-row.is-open')).map(el => el.id);
     if (!silent) {
-      const fbTbody = document.getElementById('feedbacks-tbody');
-      if (fbTbody) fbTbody.innerHTML = '<tr><td colspan="5" style="text-align:center"><span class="spinner-small"></span> Đang tải...</td></tr>';
+      const fbList = document.getElementById('support-chat-list');
+      if (fbList) fbList.innerHTML = '<div style="text-align:center; padding:1rem;"><span class="spinner-small"></span> Đang tải...</div>';
     }
     try {
       const res = await apiFetch('/api/admin/feedbacks?t=' + Date.now());
       if (res.success) {
         feedbacksData = res.data;
         renderFeedbacks(feedbacksData);
-        openDetailIds.forEach(id => {
-          const row = document.getElementById(id);
-          if (row) row.classList.add('is-open');
-        });
       }
     } catch (e) {}
   }
 
-  if (placeDropzone && placeImageInput) {
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evName => {
-      placeDropzone.addEventListener(evName, e => e.preventDefault());
-      placeDropzone.addEventListener(evName, e => e.stopPropagation());
-    });
-    
-    placeDropzone.addEventListener('dragover', () => placeDropzone.style.borderColor = 'var(--primary)');
-    placeDropzone.addEventListener('dragleave', () => placeDropzone.style.borderColor = '');
-    placeDropzone.addEventListener('drop', (e) => {
-      placeDropzone.style.borderColor = '';
-      if (e.dataTransfer && e.dataTransfer.files) handleDropzoneFiles(e.dataTransfer.files);
-    });
-    placeImageInput.addEventListener('change', (e) => {
-      if (e.target.files) handleDropzoneFiles(e.target.files);
-    });
-  }
-
-  function handleDropzoneFiles(fileList) {
-    Array.from(fileList).forEach(file => {
-      if (file.size > 5 * 1024 * 1024) {
-        alert(`Ảnh ${file.name} vượt quá dung lượng 5MB`);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        currentDropzoneFiles.push({ file: file, preview: e.target.result });
-        renderDropzonePreview(currentDropzoneFiles);
-      };
-      reader.readAsDataURL(file);
-    });
-    if (placeImageInput) placeImageInput.value = '';
-  }
-
-
-  document.querySelectorAll('[data-close-modal]').forEach(btn => {
-    btn.addEventListener('click', closeAllModals);
-  });
-  document.getElementById('admin-modal-backdrop').addEventListener('click', closeAllModals);
-
-  // --- Feedbacks ---
   function renderFeedbacks(feedbacks) {
-    const fnTable = document.getElementById('feedbacks-tbody');
-    if (!fnTable) return;
+    const listEl = document.getElementById('support-chat-list');
+    if (!listEl) return;
+    
+    let filtered = feedbacks.filter(fb => {
+       const role = fb.role || 'user';
+       if (currentSupportTab === 'business') return role === 'business';
+       return role === 'user';
+    });
 
-    fnTable.innerHTML = '';
-    if (feedbacks.length === 0) {
-      fnTable.innerHTML = '<tr><td colspan="5" style="text-align:center">Chưa có phản hồi nào</td></tr>';
+    listEl.innerHTML = '';
+    if (filtered.length === 0) {
+      listEl.innerHTML = '<div style="text-align:center; padding:1rem; color:var(--admin-text-muted);">Không có hội thoại nào.</div>';
       return;
     }
 
-    feedbacks.forEach(fb => {
-      const tr = document.createElement('tr');
-      const date = new Date(fb.createdAt);
-      const timeStr = `${date.toLocaleDateString('vi-VN')} ${date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})}`;
+    filtered.forEach(fb => {
+      const div = document.createElement('div');
+      div.className = `support-chat-item ${currentSupportChatId === fb._id ? 'is-active' : ''}`;
+      div.style.cssText = `padding:0.75rem; background:${currentSupportChatId === fb._id ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)'}; border:1px solid ${currentSupportChatId === fb._id ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.05)'}; border-radius:8px; cursor:pointer; margin-bottom: 0.5rem; transition: all 0.2s;`;
       
-      tr.innerHTML = `
-        <td><small style="color:var(--text-muted)">${timeStr}</small></td>
-        <td><strong>${fb.name}</strong></td>
-        <td><a href="mailto:${fb.email}" style="color:var(--text-muted); text-decoration:underline;">${fb.email}</a></td>
-        <td style="white-space:normal; line-height:1.4">${(fb.message || '').replace(/\n/g, '<br>')}</td>
-        <td>
-          <button class="btn btn--ghost btn--small delete-fb-btn" data-id="${fb._id}" style="color:#f87171;border-color:rgba(248,113,113,0.4)">Xóa</button>
-        </td>
-      `;
-      fnTable.appendChild(tr);
-    });
+      const lastMsg = fb.replies && fb.replies.length > 0 ? fb.replies[fb.replies.length - 1].content : fb.message;
+      const statusLabel = fb.status === 'open' ? '🟢' : (fb.status === 'resolved' ? '🔵' : '⚫');
+      const timeStr = new Date(fb.createdAt).toLocaleDateString('vi-VN');
 
-    document.querySelectorAll('.delete-fb-btn').forEach(btn => {
-      btn.addEventListener('click', async function() {
-        const id = this.getAttribute('data-id');
-        if (confirm('Bạn có chắc chắn muốn xóa phản hồi này vĩnh viễn không?')) {
-          try {
-            const res = await apiFetch('/api/admin/feedbacks/' + id, { method: 'DELETE' });
-            if (res.success) {
-              await loadFeedbacks();
-              updateStats();
-            } else {
-              alert('Lỗi: ' + res.message);
-            }
-          } catch (e) {
-            alert('Lỗi kết nối máy chủ');
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4px;">
+          <div style="font-weight:600; font-size:0.85rem; color:${currentSupportChatId === fb._id ? 'var(--primary)' : '#fff'};">${fb.name}</div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="font-size:0.7rem; color:var(--admin-text-muted);">${statusLabel} ${timeStr}</div>
+            <button class="delete-fb-btn" data-id="${fb._id}" style="background:none; border:none; color:var(--admin-text-muted); padding:2px; cursor:pointer; opacity:0.6; transition:0.2s;" onmouseover="this.style.opacity='1';this.style.color='#ff4d4d'" onmouseout="this.style.opacity='0.6';this.style.color='var(--admin-text-muted)'">
+              <i class="fas fa-trash-alt" style="font-size:0.75rem;"></i>
+            </button>
+          </div>
+        </div>
+        <div style="font-size:0.75rem; color:var(--admin-text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${lastMsg}</div>
+      `;
+      div.onclick = (e) => {
+        if (e.target.closest('.delete-fb-btn')) {
+          e.stopPropagation();
+          const id = e.target.closest('.delete-fb-btn').dataset.id;
+          if (confirm('Bạn có chắc muốn xóa hội thoại này?')) {
+            apiFetch('/api/feedback/' + id, { method: 'DELETE' })
+              .then(res => {
+                if (res.success) {
+                  WanderUI.showToast('Đã xóa hội thoại thành công', 'success');
+                  if (currentSupportChatId === id) {
+                    currentSupportChatId = null;
+                    document.getElementById('support-chat-messages').innerHTML = '<div style="text-align:center; color:var(--admin-text-muted); font-size:0.8rem; margin-top:2rem;">--- Chọn hội thoại ở menu bên trái ---</div>';
+                    document.getElementById('support-chat-title').innerText = 'Chọn một hội thoại';
+                    document.getElementById('support-chat-meta').innerText = '';
+                    document.getElementById('support-input').disabled = true;
+                    document.getElementById('btn-support-send').disabled = true;
+                  }
+                  loadFeedbacks(true);
+                } else {
+                  WanderUI.showToast(res.message || 'Lỗi khi xóa hội thoại', 'error');
+                }
+              })
+              .catch(err => {
+                console.error('Delete error:', err);
+                WanderUI.showToast('Lỗi kết nối khi xóa hội thoại', 'error');
+              });
           }
+          return;
         }
-      });
+        openSupportChat(fb._id);
+      };
+      listEl.appendChild(div);
     });
   }
 
-  const fbSearchInput = document.getElementById('feedback-search');
-  if (fbSearchInput) {
-    fbSearchInput.addEventListener('input', (e) => {
-      const q = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const filtered = feedbacksData.filter(fb => {
-        const text = ((fb.name || '') + ' ' + (fb.email || '') + ' ' + (fb.message || '')).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return text.includes(q);
+  function openSupportChat(id) {
+    currentSupportChatId = id;
+    renderFeedbacks(feedbacksData);
+    
+    const fb = feedbacksData.find(f => f._id === id);
+    if (!fb) return;
+
+    const titleEl = document.getElementById('support-chat-title');
+    const metaEl = document.getElementById('support-chat-meta');
+    const statusSelect = document.getElementById('support-chat-status');
+    const messagesEl = document.getElementById('support-chat-messages');
+    const inputEl = document.getElementById('support-input');
+    const sendBtn = document.getElementById('btn-support-send');
+
+    titleEl.textContent = fb.name;
+    metaEl.textContent = fb.email + ' - ' + new Date(fb.createdAt).toLocaleString('vi-VN');
+    
+    statusSelect.disabled = false;
+    statusSelect.value = fb.status || 'open';
+    statusSelect.onchange = async () => {
+       try {
+         const res = await apiFetch(`/api/admin/feedbacks/${id}/status`, {
+           method: 'PUT',
+           body: JSON.stringify({ status: statusSelect.value })
+         });
+         if(res.success) {
+           fb.status = statusSelect.value;
+           if(window.WanderUI) WanderUI.showToast('Cập nhật trạng thái thành công', 'success');
+           renderFeedbacks(feedbacksData);
+         }
+       } catch(e) {}
+    };
+
+    let html = '';
+
+    // First message (original)
+    html += `
+      <div class="msg-item" style="display:flex; align-items:flex-start; margin-bottom:0.75rem;">
+        <div style="max-width:65%; word-break:break-word;">
+          <div style="font-size:0.72rem; color:var(--admin-text-muted); margin-bottom:4px;">${fb.name} (Khách)</div>
+          <div style="background:rgba(255,255,255,0.07); padding:10px 14px; border-radius:4px 12px 12px 12px; font-size:0.88rem; line-height:1.5; word-break:break-word; border:1px solid rgba(255,255,255,0.08);">
+            ${fb.message}
+            ${fb.image ? `<div style="margin-top:8px;"><img src="${fb.image}" style="max-width:100%; border-radius:6px; max-height:180px; object-fit:cover;" /></div>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (fb.replies) {
+      fb.replies.forEach(r => {
+        const isAdmin = r.senderRole === 'admin' || r.senderRole === 'superadmin';
+        const timeStr = new Date(r.createdAt).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+        html += isAdmin ? `
+          <div class="msg-item" style="display:flex; justify-content:flex-end; margin-bottom:0.75rem;">
+            <div style="max-width:65%; word-break:break-word;">
+              <div style="font-size:0.72rem; color:#a5b4fc; margin-bottom:4px; text-align:right;">${r.senderName} • ${timeStr}</div>
+              <div style="background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; padding:10px 14px; border-radius:12px 4px 12px 12px; font-size:0.88rem; line-height:1.5; word-break:break-word; box-shadow:0 4px 12px rgba(99,102,241,0.3);">
+                ${r.content}
+              </div>
+            </div>
+          </div>
+        ` : `
+          <div class="msg-item" style="display:flex; align-items:flex-start; margin-bottom:0.75rem;">
+            <div style="max-width:65%; word-break:break-word;">
+              <div style="font-size:0.72rem; color:var(--admin-text-muted); margin-bottom:4px;">${r.senderName} • ${timeStr}</div>
+              <div style="background:rgba(255,255,255,0.07); color:#fff; padding:10px 14px; border-radius:4px 12px 12px 12px; font-size:0.88rem; line-height:1.5; word-break:break-word; border:1px solid rgba(255,255,255,0.08);">
+                ${r.content}
+              </div>
+            </div>
+          </div>
+        `;
       });
-      renderFeedbacks(filtered);
-    });
+    }
+
+    messagesEl.innerHTML = html;
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    inputEl.disabled = false;
+    sendBtn.disabled = false;
+    
+    const newBtn = sendBtn.cloneNode(true);
+    sendBtn.parentNode.replaceChild(newBtn, sendBtn);
+    const newBtnRef = document.getElementById('btn-support-send');
+    
+    newBtnRef.onclick = async () => {
+      const text = inputEl.value.trim();
+      if (!text) return;
+      newBtnRef.disabled = true;
+      try {
+        const res = await apiFetch(`/api/feedback/${id}/reply`, {
+           method: 'POST',
+           body: JSON.stringify({ content: text })
+        });
+        if(res.success) {
+           inputEl.value = '';
+           await loadFeedbacks(true);
+           openSupportChat(id);
+        } else {
+           if(window.WanderUI) WanderUI.showToast('Lỗi gửi', 'error');
+        }
+      } catch(e) {}
+      newBtnRef.disabled = false;
+    };
+  }
+
+  // Setup tabs
+  const tabUser = document.getElementById('tab-support-user');
+  const tabBusiness = document.getElementById('tab-support-business');
+  if (tabUser && tabBusiness) {
+    tabUser.onclick = () => {
+      currentSupportTab = 'user';
+      currentSupportChatId = null;
+      tabUser.style.background = 'var(--primary)';
+      tabUser.style.color = 'white';
+      tabBusiness.style.background = 'transparent';
+      tabBusiness.style.color = 'var(--text-muted)';
+      renderFeedbacks(feedbacksData);
+      resetSupportMain();
+    };
+    tabBusiness.onclick = () => {
+      currentSupportTab = 'business';
+      currentSupportChatId = null;
+      tabBusiness.style.background = 'var(--primary)';
+      tabBusiness.style.color = 'white';
+      tabUser.style.background = 'transparent';
+      tabUser.style.color = 'var(--text-muted)';
+      renderFeedbacks(feedbacksData);
+      resetSupportMain();
+    };
+  }
+
+  function resetSupportMain() {
+    const titleEl = document.getElementById('support-chat-title');
+    const metaEl = document.getElementById('support-chat-meta');
+    const statusSelect = document.getElementById('support-chat-status');
+    const messagesEl = document.getElementById('support-chat-messages');
+    const inputEl = document.getElementById('support-input');
+    const sendBtn = document.getElementById('btn-support-send');
+    if (titleEl) titleEl.textContent = 'Chọn một hội thoại';
+    if (metaEl) metaEl.textContent = '';
+    if (statusSelect) statusSelect.disabled = true;
+    if (messagesEl) messagesEl.innerHTML = '<div style="text-align:center; color:var(--admin-text-muted); font-size:0.8rem;">--- Chọn hội thoại ở menu bên trái ---</div>';
+    if (inputEl) { inputEl.disabled = true; inputEl.value = ''; }
+    if (sendBtn) sendBtn.disabled = true;
   }
 
   // --- Itineraries ---
@@ -4576,31 +4775,5 @@
     }
   };
 
-  function setupSupportChat() {
-    const btn = document.getElementById('btn-support-send');
-    const input = document.getElementById('support-input');
-    if (!btn || !input) return;
-
-    btn.onclick = () => {
-      const msg = input.value.trim();
-      if (!msg) return;
-      const box = document.getElementById('support-chat-messages');
-      const div = document.createElement('div');
-      div.style.alignSelf = 'flex-end';
-      div.style.background = 'var(--admin-primary)';
-      div.style.padding = '0.75rem';
-      div.style.borderRadius = '8px';
-      div.style.fontSize = '0.85rem';
-      div.style.marginBottom = '0.5rem';
-      div.textContent = msg;
-      box.appendChild(div);
-      input.value = '';
-      box.scrollTop = box.scrollHeight;
-      
-      setTimeout(() => {
-        WanderToast.info('Đã gửi phản hồi cho khách hàng.');
-      }, 500);
-    };
-  }
 
 })();

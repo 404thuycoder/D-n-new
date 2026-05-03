@@ -4,12 +4,12 @@ const notificationSchema = new mongoose.Schema({
   recipientId: { type: String, required: true, index: true }, // ID người nhận (User/ID/ROLE/ALL)
   recipientType: { type: String, default: 'user' },
   
-  senderId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // ID người gây ra hành động
+  senderId: { type: String }, // ID người gây ra hành động (có thể là ObjectId hoặc CustomID)
   senderName: String,
   
   type: { 
     type: String, 
-    enum: ['like', 'comment', 'booking', 'tour_request', 'system', 'message'], 
+    enum: ['like', 'comment', 'booking', 'tour_request', 'system', 'message', 'broadcast'], 
     required: true 
   },
   

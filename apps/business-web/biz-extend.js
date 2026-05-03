@@ -75,8 +75,166 @@
     revenue:   { el: 'analytics-view', label: 'Báo cáo doanh thu', load: loadAnalytics },
     customers: { el: 'dashboard-view', label: 'Quản lý khách hàng' },
     settings:  { el: 'dashboard-view', label: 'Cài đặt hệ thống' },
-    support:   { el: 'dashboard-view', label: 'Hỗ trợ đối tác' }
+    support:   { el: 'support-view',   label: 'Hỗ trợ đối tác', load: loadSupport }
   };
+
+  function loadSupport() {
+    var container = document.getElementById('support-history-list');
+    if (!container) return;
+    
+    apiFetch(API + '/api/feedback/my-feedbacks')
+      .then(function(json) {
+        if (!json.success) throw new Error(json.message);
+        var list = json.data || [];
+        if (!list.length) {
+          container.innerHTML = '<div style="text-align:center; padding:2rem; color:#888;">Bạn chưa có yêu cầu hỗ trợ nào.</div>';
+          return;
+        }
+        
+        container.innerHTML = list.map(function(f) {
+          var statusColor = f.status === 'open' ? '#22c55e' : '#94a3b8';
+          var statusText = f.status === 'open' ? 'Đang mở' : 'Đã đóng';
+          var imgHtml = f.image ? '<div style="margin-top:10px;"><img src="'+f.image+'" style="max-width:200px; border-radius:8px; border:1px solid #eee; cursor:zoom-in;" onclick="window.open(\''+f.image+'\')"></div>' : '';
+          
+          var repliesHtml = (f.replies || []).map(function(r) {
+            var isAdmin = r.senderRole === 'admin';
+            var rImgHtml = r.image ? '<div style="margin-top:6px;"><img src="'+r.image+'" style="max-width:150px; border-radius:6px; cursor:zoom-in;" onclick="window.open(\''+r.image+'\')"></div>' : '';
+            return '<div style="margin-bottom:0.75rem; display:flex; flex-direction:column; align-items:'+(isAdmin?'flex-start':'flex-end')+'">' +
+              '<div style="max-width:85%; padding:0.6rem 1rem; border-radius:12px; font-size:13px; background:'+(isAdmin?'rgba(118,75,162,0.1)':'#764ba2')+'; color:'+(isAdmin?'#1a1a2e':'#fff')+'">' +
+                '<strong>'+esc(r.senderName)+':</strong> ' + esc(r.content) + rImgHtml +
+                '<div style="font-size:10px; opacity:0.6; margin-top:4px;">'+timeAgo(r.createdAt)+'</div>' +
+              '</div></div>';
+          }).join('');
+
+          return '<div style="border:1px solid #f0f0f5; border-radius:16px; padding:1.25rem; background:#fff;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid #f8f9ff; padding-bottom:0.75rem;">' +
+              '<div><span style="font-size:11px; color:#888;">#'+f._id.substring(18)+'</span><h5 style="font-size:15px; margin-top:2px;">'+esc(f.name || 'Yêu cầu hỗ trợ')+'</h5></div>' +
+              '<span style="font-size:11px; font-weight:700; color:'+statusColor+'; background:'+statusColor+'15; padding:4px 10px; border-radius:20px;">'+statusText+'</span>' +
+            '</div>' +
+            '<div style="font-size:13px; color:#444; margin-bottom:1rem; background:#f9fafb; padding:1rem; border-radius:10px;">'+esc(f.message) + imgHtml + '</div>' +
+            '<div style="margin-top:1rem; padding-top:1rem; border-top:1px dashed #f0f0f5;">'+repliesHtml+'</div>' +
+            (f.status === 'open' ? 
+              '<div style="margin-top:1rem;">' +
+                '<div id="reply-preview-'+f._id+'" style="display:none; margin-bottom:8px; position:relative; width:60px; height:60px; border-radius:6px; overflow:hidden; border:1px solid #eee;">' +
+                  '<img src="" style="width:100%; height:100%; object-fit:cover;">' +
+                  '<div style="position:absolute; top:0; right:0; background:rgba(0,0,0,0.5); color:#fff; width:15px; height:15px; font-size:10px; display:flex; align-items:center; justify-content:center; cursor:pointer;" onclick="window.clearReplyImage(\''+f._id+'\')">×</div>' +
+                '</div>' +
+                '<div style="display:flex; gap:0.5rem; align-items:center;">' +
+                  '<button style="background:none; border:none; font-size:18px; cursor:pointer;" onclick="document.getElementById(\'reply-file-'+f._id+'\').click()">🖼️</button>' +
+                  '<input type="file" id="reply-file-'+f._id+'" hidden accept="image/*" onchange="window.handleReplyImage(this, \''+f._id+'\')">' +
+                  '<input type="text" id="biz-reply-'+f._id+'" placeholder="Nhập phản hồi..." style="flex:1; padding:0.6rem; border-radius:8px; border:1px solid #e8e8f0; font-size:13px;">' +
+                  '<button class="btn-submit-support-action" style="padding:8px 18px; font-size:12px; background:var(--primary); color:#fff; border:none; border-radius:8px; font-weight:700; cursor:pointer;" onclick="window.bizFeedbackReply(\''+f._id+'\')">Gửi</button>' +
+                '</div>' +
+              '</div>' : ''
+            ) +
+          '</div>';
+        }).join('');
+      })
+      .catch(function(e) {
+        container.innerHTML = '<div style="text-align:center; padding:2rem; color:#ef4444;">Lỗi: '+e.message+'</div>';
+      });
+  }
+
+  var supportImageBase64 = null;
+  window.handleSupportImage = function(input) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      supportImageBase64 = e.target.result;
+      document.getElementById('support-image-status').textContent = file.name;
+      var preview = document.getElementById('support-image-preview');
+      preview.style.display = 'block';
+      preview.querySelector('img').src = supportImageBase64;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  window.clearSupportImage = function() {
+    supportImageBase64 = null;
+    document.getElementById('support-image-input').value = '';
+    document.getElementById('support-image-status').textContent = 'Chưa có ảnh';
+    document.getElementById('support-image-preview').style.display = 'none';
+  }
+
+  window.submitSupport = function() {
+    var title = document.getElementById('support-title').value.trim();
+    var msg = document.getElementById('support-message').value.trim();
+    var btn = document.getElementById('btn-submit-support');
+    
+    if (!title || !msg) { alert('Vui lòng nhập đầy đủ tiêu đề và nội dung.'); return; }
+    
+    btn.disabled = true;
+    btn.textContent = 'Đang gửi...';
+    
+    apiFetch(API + '/api/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ 
+        name: title, 
+        email: 'business@partner.com', 
+        message: msg,
+        image: supportImageBase64
+      })
+    }).then(function(json) {
+      if (json.success) {
+        if (window.WanderUI && window.WanderUI.showToast) {
+            window.WanderUI.showToast('Gửi yêu cầu hỗ trợ thành công!', 'success');
+        } else {
+            alert('Gửi yêu cầu hỗ trợ thành công!');
+        }
+        document.getElementById('support-title').value = '';
+        document.getElementById('support-message').value = '';
+        window.clearSupportImage();
+        loadSupport();
+      } else {
+        alert('Lỗi: ' + json.message);
+      }
+    }).finally(function() {
+      btn.disabled = false;
+      btn.textContent = 'Gửi yêu cầu ngay';
+    });
+  }
+
+  window.bizFeedbackReply = function(id) {
+    var inp = document.getElementById('biz-reply-' + id);
+    if (!inp) return;
+    var content = inp.value.trim();
+    var image = replyImages[id] || null;
+    
+    if (!content && !image) return;
+    
+    apiFetch(API + '/api/feedback/' + id + '/reply', {
+      method: 'POST',
+      body: JSON.stringify({ content: content, image: image })
+    }).then(function(json) {
+      if (json.success) {
+        delete replyImages[id];
+        loadSupport();
+      } else {
+        alert('Lỗi: ' + (json.message || 'Không thể gửi phản hồi'));
+      }
+    });
+  }
+
+  var replyImages = {};
+  window.handleReplyImage = function(input, id) {
+    var file = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      replyImages[id] = e.target.result;
+      var preview = document.getElementById('reply-preview-' + id);
+      preview.style.display = 'block';
+      preview.querySelector('img').src = replyImages[id];
+    };
+    reader.readAsDataURL(file);
+  }
+
+  window.clearReplyImage = function(id) {
+    delete replyImages[id];
+    document.getElementById('reply-file-' + id).value = '';
+    document.getElementById('reply-preview-' + id).style.display = 'none';
+  }
 
   function showView(viewKey) {
     // Hide all views

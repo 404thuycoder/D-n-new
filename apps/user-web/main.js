@@ -2305,30 +2305,34 @@
   }
   var form = document.querySelector("[data-contact-form]");
   var statusEl = document.querySelector("[data-form-status]");
-  var chkAnon = document.getElementById("chk-anonymous");
   var nameWrap = document.getElementById("field-name-wrap");
   var emailWrap = document.getElementById("field-email-wrap");
   var nameInput = document.getElementById("contact-name");
   var emailInput = document.getElementById("contact-email");
-  if (chkAnon) {
-    chkAnon.addEventListener("change", function () {
-      if (this.checked) {
-        if (nameWrap) nameWrap.style.display = "none";
-        if (emailWrap) emailWrap.style.display = "none";
-        if (nameInput) {
-          nameInput.required = false;
-          nameInput.value = "";
+  var imageInput = document.getElementById("contact-image");
+  var imagePreviewWrap = document.getElementById("contact-image-preview");
+  var imagePreviewImg = imagePreviewWrap ? imagePreviewWrap.querySelector("img") : null;
+  var currentImageBase64 = null;
+
+  if (imageInput && imagePreviewWrap && imagePreviewImg) {
+    imageInput.addEventListener("change", function(e) {
+      var file = e.target.files[0];
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+          if (window.WanderUI) WanderUI.showToast("Ảnh vượt quá dung lượng 5MB", "error");
+          imageInput.value = "";
+          return;
         }
-        if (emailInput) {
-          emailInput.required = false;
-          emailInput.value = "";
-        }
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+          currentImageBase64 = evt.target.result;
+          imagePreviewImg.src = currentImageBase64;
+          imagePreviewWrap.style.display = "block";
+        };
+        reader.readAsDataURL(file);
       } else {
-        if (nameWrap) nameWrap.style.display = "block";
-        if (emailWrap) emailWrap.style.display = "block";
-        if (nameInput) nameInput.required = true;
-        if (emailInput) emailInput.required = true;
-        updateContactPrefill(); // Load lại thông tin user nếu có
+        currentImageBase64 = null;
+        imagePreviewWrap.style.display = "none";
       }
     });
   }
@@ -2336,15 +2340,13 @@
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       
-      // Validate email if not anonymous
-      if (!chkAnon || !chkAnon.checked) {
-        var emailVal = emailInput ? emailInput.value.trim() : "";
-        if (!emailVal || !emailVal.includes('@') || !emailVal.includes('.')) {
-          statusEl.textContent = "✖ Email không hợp lệ";
-          statusEl.classList.add("is-error");
-          if (window.WanderUI) WanderUI.showToast('Email không hợp lệ', 'error');
-          return;
-        }
+      // Validate email
+      var emailVal = emailInput ? emailInput.value.trim() : "";
+      if (!emailVal || !emailVal.includes('@') || !emailVal.includes('.')) {
+        statusEl.textContent = "✖ Email không hợp lệ";
+        statusEl.classList.add("is-error");
+        if (window.WanderUI) WanderUI.showToast('Email không hợp lệ', 'error');
+        return;
       }
       
       // Validate message
@@ -2362,7 +2364,8 @@
       var payload = {
         name: fd.get("name") || "",
         email: fd.get("email") || "",
-        message: fd.get("message") || ""
+        message: fd.get("message") || "",
+        image: currentImageBase64
       };
       fetch('/api/feedback', {
         method: "POST",
@@ -2374,6 +2377,8 @@
           statusEl.textContent = "✔ Đã gửi yêu cầu! Cảm ơn bạn.";
           statusEl.classList.add("is-success");
           form.reset();
+          currentImageBase64 = null;
+          if (imagePreviewWrap) imagePreviewWrap.style.display = "none";
           updateContactPrefill();
         } else {
           statusEl.textContent = "✖ Lỗi: " + (json.message || "Không thể gửi.");

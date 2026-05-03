@@ -251,6 +251,43 @@ td{padding:11px 16px;border-bottom:1px solid #f5f6fa}
         <div id="messages-list" style="display:flex; flex-direction:column; gap:16px;"></div>
      </div>
   </div>
+
+  <div id="support-view" class="biz-view" style="display:none; padding: 20px;">
+    <div class="card" style="padding: 24px;">
+      <div class="wh" style="margin-bottom: 20px;"><span class="wt">Hỗ trợ đối tác & Liên hệ Admin</span></div>
+      
+      <!-- New Ticket Form -->
+      <div id="support-new-form" style="background:rgba(118,75,162,0.03); border:1px solid rgba(118,75,162,0.1); border-radius:12px; padding:1.5rem; margin-bottom:2rem;">
+        <h4 style="margin-bottom:1rem; font-size:14px; color:var(--primary)">Gửi yêu cầu hỗ trợ mới</h4>
+        <div style="display:flex; flex-direction:column; gap:1rem;">
+          <input type="text" id="support-title" placeholder="Tiêu đề yêu cầu..." style="padding:0.75rem; border-radius:8px; border:1px solid #e8e8f0; font-size:13px;">
+          <textarea id="support-message" placeholder="Nội dung cần hỗ trợ chi tiết..." rows="4" style="padding:0.75rem; border-radius:8px; border:1px solid #e8e8f0; font-size:13px; resize:none;"></textarea>
+          
+          <!-- Image Upload for Support -->
+          <div style="display:flex; flex-direction:column; gap:0.5rem;">
+            <div style="display:flex; align-items:center; gap:0.75rem;">
+              <button class="btn-submit-support-action" style="background:#f0ecff; color:#764ba2; border:1px dashed #764ba2; padding:6px 12px; font-size:11px;" onclick="document.getElementById('support-image-input').click()">🖼️ Gửi ảnh đính kèm</button>
+              <input type="file" id="support-image-input" accept="image/*" hidden onchange="window.handleSupportImage(this)">
+              <span id="support-image-status" style="font-size:11px; color:#888;">Chưa có ảnh</span>
+            </div>
+            <div id="support-image-preview" style="display:none; position:relative; width:80px; height:80px; border-radius:8px; overflow:hidden; border:1px solid #e8e8f0;">
+              <img src="" style="width:100%; height:100%; object-fit:cover;">
+              <div style="position:absolute; top:2px; right:2px; background:rgba(0,0,0,0.5); color:#fff; width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; cursor:pointer;" onclick="window.clearSupportImage()">×</div>
+            </div>
+          </div>
+
+          <div style="text-align:right">
+            <button class="btn-submit-support-action" id="btn-submit-support" onclick="window.submitSupport()" style="background:linear-gradient(135deg,#667eea,#764ba2); color:#fff; border:none; padding:10px 18px; border-radius:10px; font-weight:700; font-size:13px; cursor:pointer;">Gửi yêu cầu ngay</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- History List -->
+      <div id="support-history-list" style="display:flex; flex-direction:column; gap:1.5rem;">
+        <div style="text-align:center; padding:2rem; color:#888;">Đang tải lịch sử hỗ trợ...</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div id="modal-root"></div>

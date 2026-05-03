@@ -25,6 +25,7 @@
       margin-bottom: 1rem;
       background: linear-gradient(to right, #fff, var(--primary));
       -webkit-background-clip: text;
+      background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     
@@ -220,6 +221,15 @@
         // Pre-populate placeStore from static data
         PLACES.forEach(p => { if (p.id) placeStore[p.id] = p; });
 
+        // Auto-select tab from hash or query
+        const hash = window.location.hash.replace('#', '');
+        if (hash && ['wishlist', 'trips', 'reviews', 'feedbacks'].includes(hash)) {
+          currentTab = hash;
+          tabs.forEach(t => {
+            t.classList.toggle('is-active', t.getAttribute('data-tab') === hash);
+          });
+        }
+
         loadTabData(currentTab);
       }
 
@@ -358,16 +368,64 @@
         }
 
         content.innerHTML = '<div class="history-list">' + fbs.map(f => `
-          <div class="history-card">
+          <div class="history-card" style="flex-direction: column;">
             <div class="history-card__content">
-              <div class="history-card__type">Phản hồi trang web</div>
-              <h3 class="history-card__title">Góp ý hệ thống</h3>
-              <p class="history-card__meta">📅 Gửi ngày: ${new Date(f.createdAt).toLocaleDateString('vi-VN')}</p>
-              <div class="history-card__text">"${f.message}"</div>
+              <div style="display:flex; justify-content:space-between;">
+                <div class="history-card__type">Hỗ trợ / Phản hồi</div>
+                <span class="trip-status status-${f.status === 'open' ? 'planning' : 'completed'}">${f.status === 'open' ? 'Đang mở' : (f.status === 'resolved' ? 'Đã giải quyết' : 'Đã đóng')}</span>
+              </div>
+              <p class="history-card__meta">📅 Gửi ngày: ${new Date(f.createdAt).toLocaleDateString('vi-VN')} lúc ${new Date(f.createdAt).toLocaleTimeString('vi-VN')}</p>
+              
+              <div class="chat-thread" style="background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1rem; margin-top: 1rem;">
+                <div class="chat-msg user-msg" style="margin-bottom: 1rem; text-align: right;">
+                  <div style="font-weight: 700; color: var(--accent); font-size: 0.85rem; margin-bottom: 4px;">Bạn</div>
+                  <div style="display: inline-block; background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.3); padding: 10px 15px; border-radius: 12px 12px 0 12px; max-width: 80%; text-align: left;">
+                    ${f.message}
+                    ${f.image ? `<div style="margin-top:10px;"><img src="${f.image}" style="max-width:100%; border-radius:8px; max-height:200px; border:1px solid rgba(255,255,255,0.1);" /></div>` : ''}
+                  </div>
+                </div>
+                
+                ${(f.replies || []).map(r => `
+                  <div class="chat-msg ${r.senderRole === 'user' ? 'user-msg' : 'admin-msg'}" style="margin-bottom: 1rem; text-align: ${r.senderRole === 'user' ? 'right' : 'left'};">
+                    <div style="font-weight: 700; color: ${r.senderRole === 'user' ? 'var(--accent)' : '#10b981'}; font-size: 0.85rem; margin-bottom: 4px;">${r.senderName}</div>
+                    <div style="display: inline-block; background: ${r.senderRole === 'user' ? 'rgba(56, 189, 248, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; border: 1px solid ${r.senderRole === 'user' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(16, 185, 129, 0.3)'}; padding: 10px 15px; border-radius: ${r.senderRole === 'user' ? '12px 12px 0 12px' : '12px 12px 12px 0'}; max-width: 80%; text-align: left;">
+                      ${r.content}
+                    </div>
+                    <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 4px;">${new Date(r.createdAt).toLocaleString('vi-VN')}</div>
+                  </div>
+                `).join('')}
+              </div>
+
+              <!-- Reply area removed as per requirement: one-way admin announcements -->
+            </div>
+          </div>
             </div>
           </div>
         `).join('') + '</div>';
       }
+
+      window.sendFeedbackReply = async function(id) {
+        const input = document.getElementById('reply-input-' + id);
+        const contentVal = input.value.trim();
+        if (!contentVal) return;
+        
+        try {
+          const res = await fetch('/api/feedback/' + id + '/reply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+            body: JSON.stringify({ content: contentVal })
+          });
+          const json = await res.json();
+          if (json.success) {
+            input.value = '';
+            loadTabData('feedbacks'); // reload chat
+          } else {
+            alert('Lỗi: ' + json.message);
+          }
+        } catch(e) {
+          alert('Lỗi kết nối máy chủ');
+        }
+      };
 
       // Event delegation for detail buttons
       content.addEventListener('click', function(e) {

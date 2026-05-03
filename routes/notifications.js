@@ -133,7 +133,8 @@ router.post('/broadcast', sharedAuth, roleAuth(['admin', 'superadmin']), async (
 
     res.json({ success: true, data: broadcastRecord, message: isScheduled ? 'Đã lập lịch gửi thông báo thành công' : 'Đã gửi thông báo thành công' });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Broadcast POST Error:', err);
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
   }
 });
 
@@ -164,7 +165,8 @@ router.get('/history', sharedAuth, roleAuth(['admin', 'superadmin']), async (req
     const history = await Broadcast.find().sort({ createdAt: -1 }).limit(50);
     res.json({ success: true, data: history });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Broadcast GET History Error:', err);
+    res.status(500).json({ success: false, message: 'Server error: ' + err.message });
   }
 });
 

@@ -43,18 +43,30 @@ const generateCustomId = (roleOrKind) => {
 
 const verifyPortalToken = (expectedPortal) => async (req, res, next) => {
   const token = req.header('x-auth-token');
-  if (!token) {
-    if (expectedPortal === null) return next(); // sharedAuth: cho phép tiếp tục nếu không có token
+  if (!token || token === 'null' || token === 'undefined') {
+    if (expectedPortal === null) return next(); 
     return res.status(401).json({ success: false, message: 'Không có token, từ chối quyền truy cập' });
   }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const account = decoded.account || decoded.user || decoded; // Handle old and new formats
+    // Flexible account extraction
+    const account = decoded.account || decoded.user || (decoded.id ? decoded : null);
+    if (!account) return res.status(401).json({ success: false, message: 'Auth: Invalid token structure' });
+    
     const accountId = account.id || account._id || account.customId;
     if (!account || !accountId) return res.status(401).json({ success: false, message: 'Auth: Token missing account ID' });
-    account.id = accountId; // Standardize for rest of logic
     
-    if (expectedPortal && account.portal !== expectedPortal) {
+    // Standardize portal
+    if (!account.portal) {
+      if (decoded.role === 'admin' || decoded.role === 'superadmin') account.portal = 'admin';
+      else if (decoded.portal) account.portal = decoded.portal;
+      else account.portal = expectedPortal || 'user';
+    }
+    
+    account.id = accountId; 
+    
+    const isPortalCheckRequired = expectedPortal && expectedPortal !== null && expectedPortal !== 'null';
+    if (isPortalCheckRequired && account.portal !== expectedPortal) {
       return res.status(403).json({ success: false, message: `Auth: Portal mismatch (Expected ${expectedPortal}, got ${account.portal})` });
     }
 
@@ -785,4 +797,4 @@ router.post('/reset-password/:token', async (req, res) => {
   }
 });
 
-module.exports = { router, auth, businessAuth, adminTokenAuth, sharedAuth, signPortalToken, generateCustomId };
+module.exports = { router, auth, businessAuth, adminTokenAuth, sharedAuth, verifyPortalToken, signPortalToken, generateCustomId };

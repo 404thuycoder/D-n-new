@@ -150,16 +150,24 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
   }
 
   // ─── Notifications ────────────────────────────────────────────────────────
+  let lastNotifCount = -1;
   async function updateNotificationBadge() {
     const token = localStorage.getItem('wander_token') || localStorage.getItem('wander_admin_token');
     if (!token) return;
     try {
       const res = await fetch('/api/notifications/unread-count', { headers: { 'x-auth-token': token } });
       if (res.status === 401) {
-        // Silent fail for unauthorized
         return;
       }
       const json = await res.json();
+      
+      // Show toast if count increased
+      if (lastNotifCount !== -1 && json.count > lastNotifCount) {
+        WanderUI.showToast('Bạn có thông báo mới!', 'info');
+        // Optional: Play a subtle sound
+      }
+      lastNotifCount = json.count;
+
       const badge = document.querySelector('[data-notif-badge]');
       if (badge) {
         if (json.count > 0) {
@@ -1940,6 +1948,15 @@ window.WanderUI = Object.assign(window.WanderUI || {}, (function () {
     injectCommonComponents();
     initNavigation();
     updateNotificationBadge();
+    
+    // Hash-based modal opening (e.g. #auth)
+    const handleHashModal = () => {
+      const hash = window.location.hash;
+      if (hash === '#auth') openAuthModal('login');
+      if (hash === '#register') openAuthModal('register');
+    };
+    window.addEventListener('hashchange', handleHashModal);
+    handleHashModal();
     syncAuthUI();
     initTheme();
     initGlobalChatbot();

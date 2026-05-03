@@ -848,6 +848,36 @@ router.post('/users/:id/reset-password', adminTokenAuth, adminAuth, async (req, 
   }
 });
 
+// ─────────────────────────────────────────────
+//  API: Quản lý Phản hồi / Hỗ trợ (Feedbacks / Tickets)
+// ─────────────────────────────────────────────
+
+// Lấy danh sách feedbacks (hỗ trợ User và Business)
+router.get('/feedbacks', adminTokenAuth, adminAuth, async (req, res) => {
+  try {
+    const feedbacks = await Feedback.find().sort({ updatedAt: -1, createdAt: -1 });
+    res.json({ success: true, data: feedbacks });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Đổi trạng thái feedback
+router.put('/feedbacks/:id/status', adminTokenAuth, adminAuth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!['open', 'closed', 'resolved'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Trạng thái không hợp lệ' });
+    }
+    const feedback = await Feedback.findByIdAndUpdate(req.params.id, { status, updatedAt: new Date() }, { new: true });
+    if (!feedback) return res.status(404).json({ success: false, message: 'Không tìm thấy phản hồi' });
+    
+    res.json({ success: true, data: feedback });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Cập nhật quyền nhanh (bật/tắt admin) — CHỈ Super Admin
 router.put('/users/:id/role', adminTokenAuth, superAdminAuth, async (req, res) => {
   try {

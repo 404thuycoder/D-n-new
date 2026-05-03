@@ -452,10 +452,7 @@
           <p>Để lại thông tin — chuyên gia của chúng tôi sẽ gọi lại trong 24 giờ (giờ hành chính).</p>
         </div>
         <form class="cta-form" data-contact-form>
-          <label class="field field--full" style="display: flex; align-items: center; gap: 0.5rem; flex-direction: row; margin-bottom: 0.5rem; cursor: pointer;">
-            <input type="checkbox" id="chk-anonymous" style="width: 1.2rem; height: 1.2rem; margin: 0; cursor: pointer;">
-            <span style="font-size: 0.95rem; margin: 0; user-select: none;">Tôi muốn gửi phản hồi ẩn danh (Không cần Tên & Email)</span>
-          </label>
+
           <label class="field" id="field-name-wrap">
             <span class="field-label">Họ tên</span>
             <input type="text" name="name" id="contact-name" required autocomplete="name" placeholder="Nguyễn Văn A" />
@@ -467,6 +464,13 @@
           <label class="field field--full">
             <span class="field-label">Nội dung phản hồi / yêu cầu (*)</span>
             <textarea name="message" rows="3" required placeholder="Bạn cần hỗ trợ hoặc muốn góp ý gì cho chúng tôi?"></textarea>
+          </label>
+          <label class="field field--full">
+            <span class="field-label">Đính kèm ảnh (Tùy chọn)</span>
+            <input type="file" id="contact-image" accept="image/*" style="font-size: 0.9rem; padding: 0.5rem 0;" />
+            <div id="contact-image-preview" style="margin-top: 0.5rem; display: none;">
+              <img src="" style="max-width: 100px; max-height: 100px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1);" />
+            </div>
           </label>
           <button type="submit" class="btn btn--primary btn--block">Gửi Phản Hồi</button>
           <p class="form-status" data-form-status role="status" aria-live="polite"></p>
@@ -637,9 +641,9 @@
   <!-- voice-overlay will be injected by SharedUI.js?v=1777307000000 -->
 
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js?v=888888888" defer></script>
-  <script src="places-data.js?v=888888888" defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.13.11/runtime.min.js?v=888888888" defer></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <script src="places-data.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/regenerator-runtime/0.13.11/runtime.min.js" defer></script>
   <script src="SharedUI.js?v=1777335000000" defer></script>
   <script src="voice-helper.js?v=1777307000000" defer></script>
   <script src="chat-brain.js?v=1777307000000" defer></script>
