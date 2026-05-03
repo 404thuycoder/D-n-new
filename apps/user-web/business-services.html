@@ -296,32 +296,85 @@
   </main>
 
   <!-- Booking Modal -->
-  <div data-modal="booking" class="modal" hidden>
-    <div class="modal__inner" style="max-width:460px;background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,0.5);">
-      <div style="padding:2rem;">
-        <button class="modal__close" data-modal-close style="position:absolute;top:1rem;right:1rem;font-size:1.5rem;color:#444;">×</button>
-        <h3 style="margin-bottom:0.3rem;color:#f59e0b;">📅 Đặt dịch vụ</h3>
-        <p id="booking-place-name" style="font-weight:700;margin-bottom:1.5rem;color:#1a1a2e;font-size:1.05rem;"></p>
-        <form id="booking-form">
-          <input type="hidden" id="booking-place-id">
-          <div style="margin-bottom:1rem;">
-            <label style="display:block;font-size:0.88rem;margin-bottom:0.4rem;font-weight:600;color:#444;">Ngày sử dụng</label>
-            <input type="date" id="booking-date" required style="width:100%;padding:0.8rem;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.95rem;">
+  <div id="booking-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+    <div style="background:#1e293b;border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:2rem;max-width:480px;width:94%;max-height:90vh;overflow-y:auto;position:relative;">
+      <button onclick="closeBookingModal()" style="position:absolute;top:1rem;right:1rem;background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;">✕</button>
+      <h3 id="bk-title" style="margin:0 0 .25rem;font-family:'Outfit',sans-serif;color:#f59e0b;">📅 Đặt dịch vụ</h3>
+      <p id="bk-place-name" style="margin:0 0 1.5rem;font-weight:700;color:#fff;font-size:1rem;"></p>
+      <form id="booking-form">
+        <input type="hidden" id="bk-place-id">
+        <input type="hidden" id="bk-is-tour" value="0">
+        <div id="bk-tour-date-wrap" style="display:none;margin-bottom:1rem;">
+          <label style="display:block;font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:.4rem;">🛫 Ngày khởi hành tour</label>
+          <input type="date" id="bk-tour-date" style="width:100%;padding:.75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:.95rem;">
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label style="display:block;font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:.4rem;">📅 Ngày sử dụng</label>
+          <input type="date" id="bk-date" required style="width:100%;padding:.75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:.95rem;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:1rem;">
+          <div>
+            <label style="display:block;font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:.4rem;">👤 Họ và tên</label>
+            <input type="text" id="bk-name" required placeholder="Nguyễn Văn A" style="width:100%;padding:.75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:.9rem;">
           </div>
-          <div style="margin-bottom:1rem;">
-            <label style="display:block;font-size:0.88rem;margin-bottom:0.4rem;font-weight:600;color:#444;">Số lượng khách</label>
-            <input type="number" id="booking-people" value="1" min="1" required style="width:100%;padding:0.8rem;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.95rem;">
+          <div>
+            <label style="display:block;font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:.4rem;">📞 Điện thoại</label>
+            <input type="tel" id="bk-phone" required placeholder="0901 234 567" style="width:100%;padding:.75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:.9rem;">
           </div>
-          <div style="margin-bottom:1rem;">
-            <label style="display:block;font-size:0.88rem;margin-bottom:0.4rem;font-weight:600;color:#444;">Họ và tên</label>
-            <input type="text" id="booking-customer-name" required placeholder="Tên của bạn" style="width:100%;padding:0.8rem;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.95rem;">
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label style="display:block;font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:.4rem;">👥 Số lượng khách</label>
+          <input type="number" id="bk-people" value="1" min="1" max="100" required style="width:100%;padding:.75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:.95rem;">
+        </div>
+        <div style="margin-bottom:1rem;">
+          <label style="display:block;font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:.4rem;">📝 Yêu cầu đặc biệt (tuỳ chọn)</label>
+          <textarea id="bk-notes" rows="2" placeholder="VD: ăn chay, trẻ em, hỗ trợ xe lăn..." style="width:100%;padding:.75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:.9rem;resize:none;"></textarea>
+        </div>
+        <div style="margin-bottom:1.5rem;">
+          <label style="display:block;font-size:.85rem;font-weight:600;color:#94a3b8;margin-bottom:.6rem;">💳 Phương thức thanh toán</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+            <label id="pm-contact" style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border-radius:10px;border:1.5px solid #6366f1;background:rgba(99,102,241,.12);cursor:pointer;">
+              <input type="radio" name="bk-payment" value="contact" checked style="accent-color:#6366f1;"> 📞 Liên hệ thanh toán
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);cursor:pointer;">
+              <input type="radio" name="bk-payment" value="transfer" style="accent-color:#6366f1;"> 🏦 Chuyển khoản
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);cursor:pointer;">
+              <input type="radio" name="bk-payment" value="momo" style="accent-color:#6366f1;"> 💜 MoMo
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;padding:.6rem .75rem;border-radius:10px;border:1.5px solid rgba(255,255,255,.12);cursor:pointer;">
+              <input type="radio" name="bk-payment" value="zalopay" style="accent-color:#6366f1;"> 💙 ZaloPay
+            </label>
           </div>
-          <div style="margin-bottom:1.5rem;">
-            <label style="display:block;font-size:0.88rem;margin-bottom:0.4rem;font-weight:600;color:#444;">Số điện thoại</label>
-            <input type="tel" id="booking-phone" required placeholder="0901 234 567" style="width:100%;padding:0.8rem;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.95rem;">
-          </div>
-          <button type="submit" style="width:100%;padding:1rem;background:#f59e0b;color:white;border:none;border-radius:12px;font-weight:800;font-size:1rem;cursor:pointer;transition:filter 0.2s;" onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">XÁC NHẬN ĐẶT CHỖ</button>
-        </form>
+        </div>
+        <div id="bk-price-summary" style="background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:12px;padding:.9rem 1rem;margin-bottom:1.25rem;display:none;">
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;color:#94a3b8;"><span>Đơn giá:</span><span id="bk-unit-price">—</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:.85rem;color:#94a3b8;"><span>Số khách:</span><span id="bk-people-count">1</span></div>
+          <div style="display:flex;justify-content:space-between;font-weight:800;font-size:1.05rem;color:#f59e0b;margin-top:.4rem;"><span>Tổng dự kiến:</span><span id="bk-total-price">—</span></div>
+        </div>
+        <div id="bk-error" style="color:#f87171;font-size:.85rem;margin-bottom:.75rem;display:none;"></div>
+        <button type="submit" id="bk-submit-btn" style="width:100%;padding:1rem;background:linear-gradient(135deg,#f59e0b,#d97706);color:white;border:none;border-radius:12px;font-weight:800;font-size:1rem;cursor:pointer;">🚀 XÁC NHẬN ĐẶT CHỖ</button>
+        <p style="text-align:center;font-size:.78rem;color:#64748b;margin-top:.75rem;">Bên doanh nghiệp sẽ liên hệ xác nhận trong vòng 24h</p>
+      </form>
+    </div>
+  </div>
+
+  <!-- Chat Drawer -->
+  <div id="chat-drawer" style="display:none;position:fixed;bottom:1rem;right:1rem;z-index:8500;width:360px;max-width:95vw;">
+    <div style="background:#1e293b;border:1px solid rgba(255,255,255,.12);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.6);">
+      <div style="background:#6366f1;padding:.9rem 1rem;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-weight:700;color:#fff;font-size:.95rem;">💬 <span id="chat-biz-name">Nhắn tin</span></div>
+          <div style="font-size:.75rem;color:rgba(255,255,255,.7);">Hỏi về dịch vụ</div>
+        </div>
+        <button onclick="closeChatDrawer()" style="background:none;border:none;color:#fff;font-size:1.25rem;cursor:pointer;">✕</button>
+      </div>
+      <div id="chat-messages" style="height:220px;overflow-y:auto;padding:.75rem;display:flex;flex-direction:column;gap:.5rem;">
+        <div style="text-align:center;color:#64748b;font-size:.8rem;padding:1rem;">Gửi tin nhắn để hỏi về dịch vụ</div>
+      </div>
+      <div style="padding:.75rem;border-top:1px solid rgba(255,255,255,.08);display:flex;gap:.5rem;">
+        <input id="chat-input" type="text" placeholder="Nhập tin nhắn..." style="flex:1;padding:.6rem .75rem;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;font-size:.88rem;" onkeydown="if(event.key==='Enter')sendChatMsg()">
+        <button onclick="sendChatMsg()" style="padding:.6rem 1rem;background:#6366f1;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;">Gửi</button>
       </div>
     </div>
   </div>
@@ -334,6 +387,186 @@
 
   <script src="SharedUI.js?v=2"></script>
   <script src="main.js"></script>
+  <script>
+  // ── Booking Modal Logic ──────────────────────────────────
+  var _bkPlace = null;
+  var _chatBizId = null;
+
+  function fmtPriceVN(n) {
+    if (!n || n===0) return 'Liên hệ';
+    if (n>=1000000) return (n/1000000).toFixed(1).replace('.0','')+'M ₫';
+    return Math.round(n/1000)+'K ₫';
+  }
+
+  window.openBookingModal = function(placeId) {
+    var place = (window._allBizPlaces||[]).find(function(p){return p.id===placeId || p._id===placeId;});
+    if (!place) { alert('Không tìm thấy thông tin dịch vụ'); return; }
+    _bkPlace = place;
+    document.getElementById('bk-place-id').value = place.id;
+    document.getElementById('bk-place-name').textContent = place.name;
+    document.getElementById('bk-title').textContent = (place.isTour ? '🗺️ Đặt Tour' : '📅 Đặt dịch vụ');
+    document.getElementById('bk-is-tour').value = place.isTour ? '1' : '0';
+    document.getElementById('bk-tour-date-wrap').style.display = place.isTour ? 'block' : 'none';
+    // Set min date to today
+    var today = new Date().toISOString().split('T')[0];
+    document.getElementById('bk-date').min = today;
+    document.getElementById('bk-date').value = today;
+    if (place.isTour) document.getElementById('bk-tour-date').min = today;
+    // Pre-fill from user token
+    try {
+      var tok = localStorage.getItem('wander_token');
+      if (tok) {
+        var pl = JSON.parse(atob(tok.split('.')[1]));
+        document.getElementById('bk-name').value = pl.name || '';
+      }
+    } catch(e){}
+    // Price summary
+    if (place.priceFrom) {
+      document.getElementById('bk-price-summary').style.display = 'block';
+      document.getElementById('bk-unit-price').textContent = fmtPriceVN(place.priceFrom);
+      updateBkTotal();
+    } else {
+      document.getElementById('bk-price-summary').style.display = 'none';
+    }
+    document.getElementById('bk-error').style.display='none';
+    document.getElementById('booking-modal').style.display='flex';
+  };
+
+  function updateBkTotal() {
+    if (!_bkPlace || !_bkPlace.priceFrom) return;
+    var p = parseInt(document.getElementById('bk-people').value)||1;
+    document.getElementById('bk-people-count').textContent = p;
+    document.getElementById('bk-total-price').textContent = fmtPriceVN(_bkPlace.priceFrom * p);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    var pepEl = document.getElementById('bk-people');
+    if (pepEl) pepEl.addEventListener('input', updateBkTotal);
+    // Payment radio highlight
+    document.querySelectorAll('input[name="bk-payment"]').forEach(function(r){
+      r.addEventListener('change', function(){
+        document.querySelectorAll('input[name="bk-payment"]').forEach(function(x){
+          x.closest('label').style.borderColor='rgba(255,255,255,.12)';
+          x.closest('label').style.background='transparent';
+        });
+        r.closest('label').style.borderColor='#6366f1';
+        r.closest('label').style.background='rgba(99,102,241,.12)';
+      });
+    });
+    // Booking form submit
+    var bkForm = document.getElementById('booking-form');
+    if (bkForm) {
+      bkForm.addEventListener('submit', function(e){
+        e.preventDefault();
+        var token = localStorage.getItem('wander_token');
+        if (!token) { alert('Vui lòng đăng nhập để đặt dịch vụ!'); return; }
+        var btn = document.getElementById('bk-submit-btn');
+        var errEl = document.getElementById('bk-error');
+        btn.disabled = true; btn.textContent = '⌛ Đang gửi...';
+        errEl.style.display='none';
+        var pmVal = document.querySelector('input[name="bk-payment"]:checked');
+        var payload = {
+          placeId: document.getElementById('bk-place-id').value,
+          useDate: document.getElementById('bk-date').value,
+          tourDate: document.getElementById('bk-tour-date').value || null,
+          peopleCount: parseInt(document.getElementById('bk-people').value)||1,
+          customerName: document.getElementById('bk-name').value.trim(),
+          customerPhone: document.getElementById('bk-phone').value.trim(),
+          specialRequests: document.getElementById('bk-notes').value.trim(),
+          paymentMethod: pmVal ? pmVal.value : 'contact',
+          bookingType: document.getElementById('bk-is-tour').value==='1'?'tour':'service'
+        };
+        fetch('/api/bookings', {
+          method:'POST',
+          headers:{'Content-Type':'application/json','x-auth-token':token},
+          body:JSON.stringify(payload)
+        }).then(function(r){return r.json();})
+          .then(function(json){
+            btn.disabled=false; btn.textContent='🚀 XÁC NHẬN ĐẶT CHỖ';
+            if (json.success) {
+              closeBookingModal();
+              if (window.WanderUI) WanderUI.showToast('✅ Đặt thành công! Mã: '+json.data.bookingId+'. Doanh nghiệp sẽ liên hệ bạn sớm.','success');
+              
+              if (pmVal && pmVal.value !== 'contact') {
+                setTimeout(function() { window.location.href = 'payment.html?pay=' + json.data.bookingId; }, 1000);
+              }
+            } else {
+              errEl.textContent = json.message || 'Đặt thất bại, vui lòng thử lại.';
+              errEl.style.display='block';
+            }
+          }).catch(function(){
+            btn.disabled=false; btn.textContent='🚀 XÁC NHẬN ĐẶT CHỖ';
+            errEl.textContent='Lỗi kết nối. Vui lòng thử lại.';
+            errEl.style.display='block';
+          });
+      });
+    }
+  });
+
+  window.closeBookingModal = function(){
+    document.getElementById('booking-modal').style.display='none';
+    _bkPlace=null;
+  };
+
+  // ── Chat with Business ───────────────────────────────────
+  window.openChatWithBusiness = function(bizId, bizName) {
+    _chatBizId = bizId;
+    document.getElementById('chat-biz-name').textContent = bizName || 'Đối tác';
+    document.getElementById('chat-messages').innerHTML = '<div style="text-align:center;color:#64748b;font-size:.8rem;padding:1rem;">Gửi tin nhắn để hỏi về dịch vụ</div>';
+    document.getElementById('chat-drawer').style.display='block';
+    document.getElementById('chat-input').focus();
+    loadChatHistory(bizId);
+  };
+
+  window.closeChatDrawer = function(){
+    document.getElementById('chat-drawer').style.display='none';
+  };
+
+  function loadChatHistory(bizId) {
+    var token = localStorage.getItem('wander_token');
+    if (!token || !bizId) return;
+    fetch('/api/business/'+bizId+'/chat', {headers:{'x-auth-token':token}})
+      .then(function(r){return r.json();})
+      .then(function(json){
+        if (json.success && json.data && json.data.length) renderChatMessages(json.data);
+      }).catch(function(){});
+  }
+
+  function renderChatMessages(msgs) {
+    var box = document.getElementById('chat-messages');
+    if (!box) return;
+    box.innerHTML = msgs.map(function(m){
+      var isMe = m.senderRole==='customer';
+      return '<div style="display:flex;justify-content:'+(isMe?'flex-end':'flex-start')+';">' +
+        '<div style="max-width:80%;padding:.45rem .75rem;border-radius:12px;background:'+(isMe?'#6366f1':'rgba(255,255,255,.1)')+';color:#fff;font-size:.85rem;">'+
+        escStr(m.text)+'<span style="display:block;font-size:.68rem;opacity:.55;margin-top:2px;">'+(isMe?'Bạn':'Đối tác')+'</span></div></div>';
+    }).join('');
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function escStr(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  window.sendChatMsg = function(){
+    var token = localStorage.getItem('wander_token');
+    if (!token) { alert('Vui lòng đăng nhập!'); return; }
+    var inp = document.getElementById('chat-input');
+    var text = inp.value.trim();
+    if (!text || !_chatBizId) return;
+    inp.value='';
+    // Optimistic render
+    var box = document.getElementById('chat-messages');
+    box.innerHTML += '<div style="display:flex;justify-content:flex-end;"><div style="max-width:80%;padding:.45rem .75rem;border-radius:12px;background:#6366f1;color:#fff;font-size:.85rem;">'+escStr(text)+'<span style="display:block;font-size:.68rem;opacity:.55;margin-top:2px;">Bạn</span></div></div>';
+    box.scrollTop=box.scrollHeight;
+    fetch('/api/business/'+_chatBizId+'/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-auth-token':token},
+      body:JSON.stringify({text:text})
+    }).then(function(r){return r.json();})
+      .then(function(json){
+        if (!json.success) console.warn('Chat error:',json.message);
+      }).catch(function(){});
+  };
+  </script>
   <script>
   (function() {
     var allPlaces = [];
@@ -388,7 +621,7 @@
             <span class="fav-cnt">❤️ ${p.favoritesCount || 0}</span>
           </div>
           <div class="biz-card__actions">
-            <button class="btn-biz btn-biz--primary" onclick="openPlaceModal('${p.id}')">🚀 Chi tiết &amp; Đặt lịch</button>
+            <button class="btn-biz btn-biz--primary" onclick="openBookingModal('${p.id}')">🚀 Chi tiết &amp; Đặt lịch</button>
             <button class="btn-biz btn-biz--outline" onclick="openChatWithBusiness('${p.ownerId}','${p.name.replace(/'/g,'')}')" title="Nhắn tin đối tác">💬</button>
           </div>
         </div>
@@ -444,6 +677,7 @@
 
           // Only business-partner places (have ownerId)
           allPlaces = json.data.filter(function(p){ return p.ownerId; });
+          window._allBizPlaces = allPlaces; // Expose globally for booking modal
 
           // Update stats
           var partners = new Set(allPlaces.map(function(p){ return p.ownerId; })).size;

@@ -1430,10 +1430,18 @@
             openModal('auth');
             return;
           }
-          document.getElementById('booking-place-id').value = p.id;
-          document.getElementById('booking-place-name').textContent = p.name;
-          document.getElementById('booking-customer-name').value = getProfile().displayName || '';
-          openModal('booking');
+          if (typeof window.openBookingModal === 'function') {
+            window.openBookingModal(p.id);
+          } else {
+            // Fallback for old form
+            var idEl = document.getElementById('booking-place-id');
+            if (idEl) idEl.value = p.id;
+            var nameEl = document.getElementById('booking-place-name');
+            if (nameEl) nameEl.textContent = p.name;
+            var custNameEl = document.getElementById('booking-customer-name');
+            if (custNameEl) custNameEl.value = getProfile().displayName || '';
+            openModal('booking');
+          }
         });
       }
 
@@ -1493,13 +1501,19 @@
 
   function initPlaceMap(p) {
     var mapEl = document.getElementById("place-map");
-    if (!mapEl || !p.lat || !p.lng || typeof L === 'undefined') return;
+    // Ensure lat/lng are valid numbers
+    var lat = parseFloat(p.lat);
+    var lng = parseFloat(p.lng);
+    if (!mapEl || isNaN(lat) || isNaN(lng) || typeof L === 'undefined') {
+      if (mapEl) mapEl.style.display = 'none';
+      return;
+    }
     
     if (window._placeMapInstance) {
       window._placeMapInstance.remove();
       window._placeMapInstance = null;
     }
-    window._placeMapInstance = L.map("place-map", { scrollWheelZoom: false }).setView([p.lat, p.lng], 14);
+    window._placeMapInstance = L.map("place-map", { scrollWheelZoom: false }).setView([lat, lng], 14);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap'
     }).addTo(window._placeMapInstance);
@@ -1541,7 +1555,7 @@
       iconSize: [24, 24],
       iconAnchor: [12, 12]
     });
-    L.marker([p.lat, p.lng], { icon: mainIcon }).bindPopup('<b>' + escapeHtml(p.name) + '</b><br>Tâm điểm du lịch').addTo(window._placeMapInstance);
+    L.marker([lat, lng], { icon: mainIcon }).bindPopup('<b>' + escapeHtml(p.name) + '</b><br>Tâm điểm du lịch').addTo(window._placeMapInstance);
 
     // Plot static data (amusement, dining, etc.)
     var staticItems = [];
@@ -1553,8 +1567,8 @@
     staticItems.forEach(function (item, index) {
       var angle = index / (staticItems.length || 1) * 2 * Math.PI;
       var dist = 0.003 + Math.random() * 0.004;
-      var lat = p.lat + Math.sin(angle) * dist;
-      var lon = p.lng + Math.cos(angle) * dist;
+      var itemLat = lat + Math.sin(angle) * dist;
+      var itemLon = lng + Math.cos(angle) * dist;
       var category = item.cat || 'attraction';
       var poiIcon = L.divIcon({
         className: 'poi-marker poi-marker-static poi-marker-' + category,
@@ -1562,11 +1576,11 @@
         iconSize: [36, 36], iconAnchor: [18, 18]
       });
       var popup = '<div class="poi-popup"><span class="poi-popup-category" style="color:#fcd34d">Đề xuất</span><strong class="poi-popup-title">' + escapeHtml(item.name) + '</strong><p style="font-size:0.7rem; margin:4px 0">' + escapeHtml(item.description || "") + '</p></div>';
-      L.marker([lat, lon], { icon: poiIcon }).bindPopup(popup).addTo(layers[category] || layers.attraction);
+      L.marker([itemLat, itemLon], { icon: poiIcon }).bindPopup(popup).addTo(layers[category] || layers.attraction);
     });
 
     // Fetch real-world POIs
-    fetchNearbyPOIs(p.lat, p.lng).then(function (elements) {
+    fetchNearbyPOIs(lat, lng).then(function (elements) {
       var loadingHint = legend.querySelector('.legend-loading');
       if (loadingHint) loadingHint.style.display = 'none';
       elements.forEach(function (item) {
@@ -2975,6 +2989,7 @@
 
         // Filter places that have an owner (business services)
         const bizPlaces = json.data.filter(p => p.ownerId);
+        window._allBizPlaces = bizPlaces; // Ensure booking modal can find them
 
         if (bizPlaces.length === 0) {
           grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;padding:4rem;color:#94a3b8;">Hiện chưa có tour du lịch nào từ đối tác.</p>';

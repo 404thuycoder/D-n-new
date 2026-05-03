@@ -45,6 +45,7 @@ app.use('/api/knowledge', require('./routes/knowledge'));
 app.use('/api/social', require('./routes/social'));
 app.use('/api/public', require('./routes/public'));
 app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/payments', require('./routes/payments'));
 
 // Static User Web
 app.use(express.static(path.join(__dirname, 'apps/user-web')));

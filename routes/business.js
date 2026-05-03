@@ -97,19 +97,28 @@ router.get('/places', businessAuth, async (req, res) => {
 // 1b. Get stats for business dashboard
 router.get('/stats', businessAuth, async (req, res) => {
   try {
-    const places = await Place.find({ ownerId: req.user.id });
+    const Booking = require('../models/Booking');
+    const [places, bookings] = await Promise.all([
+      Place.find({ ownerId: req.user.id }),
+      Booking.find({ ownerId: req.user.id })
+    ]);
     const totalViews = places.reduce((sum, p) => sum + (p.favoritesCount || 0), 0);
     const totalReviews = places.reduce((sum, p) => sum + (p.reviewCount || 0), 0);
     const avgRating = places.length > 0
       ? (places.reduce((sum, p) => sum + parseFloat(p.ratingAvg || 0), 0) / places.length).toFixed(1)
       : null;
+    const totalRevenue = bookings
+      .filter(b => b.status === 'confirmed' || b.status === 'completed')
+      .reduce((s, b) => s + (b.totalPrice || 0), 0);
     res.json({
       success: true,
       data: {
         totalServices: places.length,
         totalViews,
         totalReviews,
-        avgRating
+        avgRating,
+        totalBookings: bookings.length,
+        totalRevenue
       }
     });
   } catch (err) {
@@ -388,6 +397,54 @@ router.get('/leaderboard', async (req, res) => {
       .select('name displayName points avatar')
       .lean();
     res.json({ success: true, data: topBusinesses });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 8. User → Business chat: GET history
+router.get('/:bizId/chat', async (req, res) => {
+  try {
+    const { auth } = require('./auth');
+    // Manual token check (no middleware)
+    const token = req.headers['x-auth-token'];
+    let userId = null, userName = 'Khách';
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'wander-secret');
+        userId = decoded.id; userName = decoded.name || 'Khách';
+      } catch(e) {}
+    }
+    const msgs = await BusinessMessage.find({
+      businessId: req.params.bizId,
+      ...(userId ? { customerId: userId } : {})
+    }).sort({ createdAt: 1 }).lean();
+    res.json({ success: true, data: msgs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 9. User → Business chat: POST message
+router.post('/:bizId/chat', async (req, res) => {
+  try {
+    const jwt = require('jsonwebtoken');
+    const token = req.headers['x-auth-token'];
+    if (!token) return res.status(401).json({ success: false, message: 'Cần đăng nhập' });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'wander-secret');
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).json({ success: false, message: 'Tin nhắn rỗng' });
+    const msg = new BusinessMessage({
+      businessId: req.params.bizId,
+      customerId: decoded.id,
+      customerName: decoded.name || 'Khách',
+      senderRole: 'customer',
+      text: text.trim(),
+      isRead: false
+    });
+    await msg.save();
+    res.json({ success: true, data: msg });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

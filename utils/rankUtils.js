@@ -111,7 +111,15 @@ async function syncBusinessXP(ownerId) {
     const bonus = places.length * 50;
     const totalXP = Math.round(serviceScore + bonus);
 
-    await BusinessAccount.findByIdAndUpdate(ownerId, { points: totalXP });
+    const mongoose = require('mongoose');
+    let query;
+    if (mongoose.Types.ObjectId.isValid(ownerId)) {
+      query = { _id: ownerId };
+    } else {
+      query = { customId: ownerId };
+    }
+
+    await BusinessAccount.findOneAndUpdate(query, { points: totalXP });
     return totalXP;
   } catch (err) {
     console.error('Sync Business XP Error:', err);

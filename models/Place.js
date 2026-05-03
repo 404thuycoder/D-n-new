@@ -3,7 +3,14 @@ const mongoose = require('mongoose');
 const placeSchema = new mongoose.Schema({
   id:            { type: String, unique: true, sparse: true },
   name:          { type: String, required: true },
-  kind:          { type: String, enum: ['diem-du-lich', 'tien-ich'], default: 'diem-du-lich' },
+  kind:          { type: String, enum: ['diem-du-lich', 'tien-ich', 'am-thuc'], default: 'diem-du-lich' },
+  // Tour-specific fields
+  isTour:        { type: Boolean, default: false },
+  tourDuration:  { type: String, default: '' },        // VD: '3N2Đ'
+  tourIncludes:  [String],                              // Bao gồm: ăn sáng, xe đón...
+  tourGroupSize: { type: Number, default: null },       // Số khách tối đa
+  tourDifficulty:{ type: String, enum: ['easy','medium','hard'], default: 'easy' },
+  tourItinerary: [{ day: Number, title: String, detail: String }], // Lịch trình theo ngày
   region:        { type: String, default: '' },
   address:       { type: String, default: '' },
   description:   { type: String, default: '' },

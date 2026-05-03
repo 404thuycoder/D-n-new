@@ -237,44 +237,105 @@
   }
 
   // ─── Messages / Reviews ───────────────────────────────────
+  var currentMsgTab = 'reviews';
+
   function loadMessages() {
-    var list = document.getElementById('messages-list');
-    var countEl = document.getElementById('messages-count');
-    if (list) list.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;">Đang tải phản hồi...</div>';
+    var container = document.getElementById('messages-list');
+    if (!container) return;
 
-    apiFetch(API + '/api/business/reviews')
-      .then(function (json) {
-        if (!json.success) throw new Error(json.message || 'Lỗi');
-        var reviews = json.data || [];
-        if (countEl) countEl.textContent = reviews.length + ' phản hồi';
+    // Inject tabs nếu chưa có
+    if (!document.getElementById('msg-tab-bar')) {
+      var tabHtml = '<div id="msg-tab-bar" style="display:flex;gap:0.5rem;margin-bottom:1rem;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:0.5rem;">' +
+        '<button id="msg-tab-reviews" onclick="switchMsgTab(\'reviews\')" style="padding:0.5rem 1.1rem;border-radius:8px 8px 0 0;border:none;background:rgba(99,102,241,0.15);color:#818cf8;font-weight:700;cursor:pointer;">⭐ Đánh giá (<span id="cnt-reviews">...</span>)</button>' +
+        '<button id="msg-tab-inbox" onclick="switchMsgTab(\'inbox\')" style="padding:0.5rem 1.1rem;border-radius:8px 8px 0 0;border:none;background:transparent;color:#94a3b8;font-weight:700;cursor:pointer;">💬 Tin nhắn (<span id="cnt-inbox">...</span>)</button>' +
+      '</div><div id="msg-content"></div>';
+      container.innerHTML = tabHtml;
+    }
 
-        if (!list) return;
-        if (reviews.length === 0) {
-          list.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;"><div style="font-size:2rem;margin-bottom:0.75rem;">📭</div>Chưa có phản hồi nào từ khách hàng.</div>';
-          return;
-        }
-
-        list.innerHTML = reviews.map(function (r) {
-          var initials = (r.name || 'Ẩn')[0].toUpperCase();
-          var colors = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444','#0ea5e9'];
-          var color = colors[initials.charCodeAt(0) % colors.length];
-          return '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.25rem;display:flex;gap:1rem;align-items:flex-start;">' +
-            '<div style="width:40px;height:40px;border-radius:50%;background:' + color + ';display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1rem;flex-shrink:0;">' + initials + '</div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;flex-wrap:wrap;">' +
-                '<strong style="font-size:0.9rem;">' + esc(r.name || 'Khách ẩn danh') + '</strong>' +
-                '<span style="font-size:0.75rem;color:#94a3b8;">' + (r.email && r.email !== 'Không cung cấp' ? esc(r.email) : '') + '</span>' +
-                '<span style="margin-left:auto;font-size:0.75rem;color:#94a3b8;">' + timeAgo(r.createdAt) + '</span>' +
-              '</div>' +
-              '<p style="margin:0;font-size:0.875rem;color:#cbd5e1;line-height:1.6;">' + esc(r.message) + '</p>' +
-            '</div>' +
-          '</div>';
-        }).join('');
-      })
-      .catch(function (err) {
-        if (list) list.innerHTML = '<div style="text-align:center;padding:3rem;color:#f87171;">Lỗi tải dữ liệu: ' + esc(err.message) + '</div>';
-      });
+    switchMsgTab(currentMsgTab);
   }
+
+  window.switchMsgTab = function(tab) {
+    currentMsgTab = tab;
+    var rBtn = document.getElementById('msg-tab-reviews');
+    var iBtn = document.getElementById('msg-tab-inbox');
+    if (rBtn) rBtn.style.background = tab==='reviews' ? 'rgba(99,102,241,0.15)' : 'transparent';
+    if (rBtn) rBtn.style.color = tab==='reviews' ? '#818cf8' : '#94a3b8';
+    if (iBtn) iBtn.style.background = tab==='inbox' ? 'rgba(99,102,241,0.15)' : 'transparent';
+    if (iBtn) iBtn.style.color = tab==='inbox' ? '#818cf8' : '#94a3b8';
+    if (tab==='reviews') loadReviews(); else loadInbox();
+  };
+
+  function loadReviews() {
+    var mc = document.getElementById('msg-content');
+    if (mc) mc.innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8;">Đang tải...</div>';
+    apiFetch(API + '/api/business/reviews')
+      .then(function(json) {
+        var reviews = (json.success && json.data) ? json.data : [];
+        var cntEl = document.getElementById('cnt-reviews');
+        if (cntEl) cntEl.textContent = reviews.length;
+        if (!mc) return;
+        if (!reviews.length) { mc.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;">📭 Chưa có đánh giá nào.</div>'; return; }
+        mc.innerHTML = reviews.map(function(r) {
+          var stars = '★'.repeat(Math.min(r.rating||0,5)) + '☆'.repeat(Math.max(0,5-(r.rating||0)));
+          var ini = (r.userName||r.name||'K')[0].toUpperCase();
+          var clr = ['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ef4444'][ini.charCodeAt(0)%5];
+          return '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.25rem;display:flex;gap:1rem;margin-bottom:0.75rem;">' +
+            '<div style="width:40px;height:40px;border-radius:50%;background:'+clr+';display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">'+ini+'</div>' +
+            '<div style="flex:1;">' +
+              '<div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;margin-bottom:0.3rem;">' +
+                '<strong>'+esc(r.userName||r.name||'Khách')+'</strong>' +
+                '<span style="color:#fbbf24;">'+stars+'</span>' +
+                '<span style="font-size:0.78rem;color:#94a3b8;">'+esc(r.placeName||'')+'</span>' +
+                '<span style="margin-left:auto;font-size:0.75rem;color:#64748b;">'+timeAgo(r.createdAt)+'</span>' +
+              '</div>' +
+              '<p style="margin:0;color:#cbd5e1;font-size:0.88rem;line-height:1.6;">'+esc(r.text||r.message||'')+'</p>' +
+            '</div></div>';
+        }).join('');
+      }).catch(function(e){ if(mc) mc.innerHTML='<p style="color:#f87171;text-align:center;">Lỗi tải đánh giá.</p>'; });
+  }
+
+  function loadInbox() {
+    var mc = document.getElementById('msg-content');
+    if (mc) mc.innerHTML = '<div style="text-align:center;padding:2rem;color:#94a3b8;">Đang tải...</div>';
+    apiFetch(API + '/api/business/messages')
+      .then(function(json) {
+        var convs = (json.success && json.data) ? json.data : [];
+        var cntEl = document.getElementById('cnt-inbox');
+        if (cntEl) cntEl.textContent = convs.length;
+        if (!mc) return;
+        if (!convs.length) { mc.innerHTML = '<div style="text-align:center;padding:3rem;color:#94a3b8;">💬 Chưa có tin nhắn nào.</div>'; return; }
+        mc.innerHTML = convs.map(function(c) {
+          var unread = c.unreadCount > 0 ? '<span style="background:#ef4444;color:#fff;border-radius:50px;padding:0.1rem 0.5rem;font-size:0.72rem;font-weight:700;margin-left:0.5rem;">'+c.unreadCount+' mới</span>' : '';
+          var msgs = (c.messages||[]).map(function(m){
+            var isBiz = m.senderRole==='business';
+            return '<div style="display:flex;justify-content:'+(isBiz?'flex-end':'flex-start')+';margin-bottom:0.4rem;">'+
+              '<div style="max-width:80%;padding:0.5rem 0.8rem;border-radius:12px;background:'+(isBiz?'#6366f1':'rgba(255,255,255,0.08)')+';color:#fff;font-size:0.85rem;">'+esc(m.text)+'<span style="display:block;font-size:0.7rem;opacity:0.6;margin-top:0.2rem;">'+timeAgo(m.createdAt)+'</span></div></div>';
+          }).join('');
+          return '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1.25rem;margin-bottom:0.75rem;">' +
+            '<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;"><strong>'+esc(c.customerName||'Khách')+'</strong>'+unread+'<span style="margin-left:auto;font-size:0.75rem;color:#64748b;">'+timeAgo(c.time)+'</span></div>' +
+            '<div style="max-height:200px;overflow-y:auto;padding:0.5rem;background:rgba(0,0,0,0.2);border-radius:8px;margin-bottom:0.75rem;">'+msgs+'</div>' +
+            '<div style="display:flex;gap:0.5rem;">' +
+              '<input type="text" id="reply-'+esc(c.customerId)+'" placeholder="Nhập phản hồi..." style="flex:1;padding:0.5rem 0.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.06);color:#fff;font-size:0.85rem;" />' +
+              '<button onclick="bizReply(\''+esc(c.customerId)+'\',\''+esc(c.customerName||'Khách')+'\')" style="padding:0.5rem 1rem;background:#6366f1;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Gửi</button>' +
+            '</div></div>';
+        }).join('');
+      }).catch(function(){ if(mc) mc.innerHTML='<p style="color:#f87171;text-align:center;">Lỗi tải tin nhắn.</p>'; });
+  }
+
+  window.bizReply = function(customerId, customerName) {
+    var inp = document.getElementById('reply-'+customerId);
+    if (!inp || !inp.value.trim()) return;
+    var text = inp.value.trim();
+    inp.value = '';
+    apiFetch(API + '/api/business/messages', {
+      method: 'POST',
+      body: JSON.stringify({ customerId: customerId, customerName: customerName, text: text })
+    }).then(function(json){
+      if (json.success) loadInbox();
+      else alert('Lỗi gửi: ' + (json.message||''));
+    });
+  };
 
   // ─── User landing page: load real stats ──────────────────
   // (Chỉ chạy trên port 3000 / user portal, nhưng giữ lại để tránh lỗi ReferenceError)
@@ -322,8 +383,8 @@
           if (container) {
             const mockStats = {
               totalServices: d.totalServices || 0,
-              totalBookings: d.totalReviews || 0,
-              totalRevenue: (d.totalReviews || 0) * 1500000,
+              totalBookings: d.totalBookings || 0,
+              totalRevenue: (d.totalRevenue || 0),
               avgRating: d.avgRating || '0.0',
               ratedServicesCount: d.totalServices || 0
             };
@@ -391,16 +452,27 @@
       .then(function(json) {
         if (json.success && json.data) {
           const bookings = json.data;
+          // Update booking stat in dashboard
+          var statBookingEl = document.getElementById('stat-bookings');
+          if (statBookingEl) statBookingEl.textContent = bookings.length;
+          // Update revenue stat
+          var confirmedTotal = bookings.filter(function(b){ return b.status==='confirmed'||b.status==='completed'; })
+                                        .reduce(function(s,b){ return s+(b.totalPrice||0); },0);
+          var statRevEl = document.getElementById('stat-revenue');
+          if (statRevEl) statRevEl.textContent = (confirmedTotal/1000000).toFixed(1)+'M VNĐ';
+
           if (typeof renderBookings === 'function') {
             const mappedBookings = bookings.map(b => ({
               id: b.bookingId,
-              rawId: b._id, // Quan trọng để update status
+              rawId: b._id,
               customerName: b.customerName,
               serviceName: b.placeName,
               bookingDate: fmtDate(b.createdAt),
-              useDate: fmtDate(b.useDate),
+              useDate: fmtDate(b.tourDate || b.useDate),
               value: b.totalPrice,
-              status: b.status // matches pending, confirmed, cancelled
+              status: b.status,
+              paymentMethod: b.paymentMethod,
+              paymentStatus: b.paymentStatus
             }));
             renderBookings(mappedBookings, 'booking-table', { limit: 10, title: 'Đơn đặt chỗ mới từ khách hàng' });
           }

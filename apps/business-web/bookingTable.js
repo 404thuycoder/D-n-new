@@ -193,13 +193,21 @@ function renderBookings(bookings, containerId = 'booking-table', options = {}) {
     ? `<tr><td colspan="7" class="booking-empty">Chưa có đơn đặt chỗ nào.</td></tr>`
     : data.map(b => {
         const st = BOOKING_STATUS[b.status] || BOOKING_STATUS.pending;
+        const PM_LABELS = { contact: 'Liên hệ', transfer: 'C/K', momo: 'MoMo', zalopay: 'ZaloPay', card: 'Thẻ' };
+        const pmLabel = PM_LABELS[b.paymentMethod] || '—';
+        const payStr = b.paymentStatus === 'paid' 
+          ? `<span style="color:#16a34a;font-weight:700;font-size:11px;background:#dcfce7;padding:3px 8px;border-radius:12px;">Đã thanh toán (${pmLabel})</span>` 
+          : `<span style="color:#dc2626;font-size:11px;background:#fee2e2;padding:3px 8px;border-radius:12px;">Chưa thanh toán</span>`;
         return `
           <tr>
             <td class="booking-id">${b.id}</td>
             <td class="booking-name">${b.customerName}</td>
             <td class="booking-svc" title="${b.serviceName}">${b.serviceName}</td>
             <td class="booking-date">${b.useDate}</td>
-            <td class="booking-val">${fmt.format(b.value)} <span style="font-weight:400;color:#aaa;font-size:11px">VND</span></td>
+            <td class="booking-val">
+              ${fmt.format(b.value)} <span style="font-weight:400;color:#aaa;font-size:11px">VND</span>
+              <div style="margin-top:4px;">${payStr}</div>
+            </td>
             <td>
               <span class="bk-status ${st.cls}">
                 <span class="bk-dot"></span>${st.label}
